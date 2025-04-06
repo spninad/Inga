@@ -7,6 +7,7 @@ import { getDocuments, Document, deleteDocument } from '../lib/documents.service
 import { startDocumentChat } from '../lib/chat.service';
 import { supabase } from '../lib/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { RealtimePostgresInsertPayload } from '@supabase/supabase-js'; // Import the type from Supabase
 
 export default function DocumentsScreen() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -15,26 +16,36 @@ export default function DocumentsScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    // Get user and load documents
     getUserAndLoadDocuments();
+
+    // Subscribe to Supabase Realtime for the `documents` table
+    const subscription = supabase
+      .channel('documents-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'documents' },
+        (payload: RealtimePostgresInsertPayload<Document>) => { // Define the type for payload
+          console.log('New document added:', payload.new);
+          setDocuments((prevDocuments) => [payload.new, ...prevDocuments]); // Add the new document to the top of the list
+        }
+      )
+      .subscribe();
+
+    // Cleanup the subscription when the component unmounts
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   const getUserAndLoadDocuments = async () => {
     try {
-      // Get the current session
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session?.user) {
-        // User not authenticated
         Alert.alert('Authentication Required', 'Please sign in to view your documents');
-        router.replace('/auth/login'); // Assuming you have a login screen
+        router.replace('/auth/login');
         return;
       }
-      
-      // Store user ID for later use
       setUserId(session.user.id);
-      
-      // Now load documents for this user
       await loadDocuments(session.user.id);
     } catch (error) {
       console.error('Error getting authentication:', error);
@@ -55,13 +66,20 @@ export default function DocumentsScreen() {
     }
   };
 
-  const handleAddDocument = async () => {
+  const handleDocumentAdded = (newDocument: Document) => {
+    setDocuments((prevDocuments) => [newDocument, ...prevDocuments]); // Add the new document to the top of the list
+  };
+
+  const handleAddDocument = () => {
     if (!userId) {
       Alert.alert('Authentication Required', 'Please sign in to add documents');
       return;
     }
-    
-    router.push('/add-document');
+
+    router.push({
+      pathname: '/add-document',
+      params: { onDocumentAdded: handleDocumentAdded }, // Pass the callback function
+    });
   };
 
   const handleChatWithDocument = async (document: Document) => {
@@ -73,13 +91,11 @@ export default function DocumentsScreen() {
     try {
       const chatSession = await startDocumentChat(document);
       
-      // Save chat session to AsyncStorage before navigating
       try {
         await AsyncStorage.setItem(`chat_${chatSession.id}`, JSON.stringify(chatSession));
         console.log("Saved chat session to AsyncStorage:", chatSession.id);
       } catch (storageError) {
         console.error("AsyncStorage error:", storageError);
-        // Continue even if storage fails
       }
       
       router.push({
@@ -139,8 +155,7 @@ export default function DocumentsScreen() {
       </View>
     );
   }
-  
-  // Display authentication required message if not logged in
+
   if (!userId) {
     return (
       <View style={styles.authRequiredContainer}>
@@ -156,12 +171,12 @@ export default function DocumentsScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>My Documents</Text>
-      
+
       <TouchableOpacity style={styles.addButton} onPress={handleAddDocument}>
         <Ionicons name="add-circle" size={24} color="white" />
         <Text style={styles.addButtonText}>Add Document</Text>
       </TouchableOpacity>
-      
+
       {documents.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="document-outline" size={64} color="#ccc" />
@@ -176,7 +191,7 @@ export default function DocumentsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.documentItem}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.documentPreview}
                 onPress={() => router.push(`/document/${item.id}`)}
               >

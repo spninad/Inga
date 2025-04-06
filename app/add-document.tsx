@@ -14,10 +14,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { createDocument } from '../lib/documents.service.ts';
+import { createDocument, Document as CustomDocument } from '../lib/documents.service.ts'; // Alias the imported Document type
 import { supabase } from '../lib/supabaseClient.ts';
 
-export default function AddDocumentScreen() {
+export default function AddDocumentScreen({ onDocumentAdded }: { onDocumentAdded: (document: CustomDocument) => void }) { // Use the aliased type here
   const [documentName, setDocumentName] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,7 +47,7 @@ export default function AddDocumentScreen() {
     }
   };
 
-  const pickImages = async () => {
+  const uploadImages = async () => {
     try {
       // Request media library permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -83,15 +83,83 @@ export default function AddDocumentScreen() {
         setImages([...images, ...selectedImages]);
       }
     } catch (error) {
-      console.error('Error picking images:', error);
-      Alert.alert('Error', 'Failed to pick images');
+      console.error('Error uploading images:', error);
+      Alert.alert('Error', 'Failed to upload images');
     }
   };
-  
-  const removeImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
+
+  const scanImages = async () => {
+    try {
+      const scannedImages: string[] = []; // Array to store Base64 strings of scanned images
+
+      const scanImage = async (): Promise<void> => {
+        // Request camera permissions
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Denied', 'Camera access is required to scan images.');
+          return;
+        }
+
+        // Launch the camera
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.7,
+          base64: true,
+        });
+
+        console.log('ImagePicker result:', result);
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          // Convert the scanned image to Base64
+          const base64Image = result.assets[0].base64
+            ? `data:image/jpeg;base64,${result.assets[0].base64}`
+            : await FileSystem.readAsStringAsync(result.assets[0].uri, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+
+          if (!base64Image) {
+            console.error('Failed to convert image to Base64');
+            Alert.alert('Error', 'Failed to process the scanned image.');
+            return;
+          }
+
+          console.log('Base64 Image:', base64Image);
+
+          // Add the scanned image to the array
+          scannedImages.push(base64Image);
+
+          // Prompt the user to scan another image
+          return new Promise<void>((resolve) => {
+            Alert.alert(
+              'Scan Another?',
+              'Do you want to scan another image?',
+              [
+                { text: 'No', onPress: () => resolve() }, // Finish scanning
+                { text: 'Yes', onPress: async () => await scanImage().then(resolve) }, // Scan another image
+              ]
+            );
+          });
+        } else {
+          console.log('User canceled the scan');
+        }
+      };
+
+      await scanImage(); // Start the scanning process
+
+      if (scannedImages.length > 0) {
+        // Add scanned images to the `images` state
+        setImages((prevImages) => [...prevImages, ...scannedImages]);
+        Alert.alert('Success', `${scannedImages.length} images scanned successfully!`);
+      } else {
+        console.log('No images were scanned.');
+      }
+    } catch (error) {
+      console.error('Error during image scanning:', error);
+      Alert.alert('Error', 'An unexpected error occurred while scanning the images.');
+    }
   };
-  
+
   const handleSave = async () => {
     if (!userId) {
       Alert.alert('Authentication Required', 'Please sign in to continue');
@@ -102,26 +170,37 @@ export default function AddDocumentScreen() {
       Alert.alert('Required', 'Please enter a document name');
       return;
     }
-    
+
     if (images.length === 0) {
-      Alert.alert('Required', 'Please add at least one image');
+      Alert.alert('Required', 'Please upload or scan at least one image');
       return;
     }
-    
+
     try {
       setIsLoading(true);
-      
-      const document = await createDocument(documentName, images, userId);
-      
+
+      // Convert images to JSON format
+      const jsonImages = images.map((image, index) => ({
+        image,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          description: `Scanned document ${index + 1}`,
+          userId,
+        },
+      }));
+
+      // Save the document to Supabase
+      const document = await createDocument(documentName, jsonImages, userId);
+
       if (!document) {
         throw new Error('Failed to create document');
       }
-      
+
       Alert.alert('Success', 'Document created successfully', [
-        { 
-          text: 'OK', 
-          onPress: () => router.back() 
-        }
+        {
+          text: 'OK',
+          onPress: () => router.push('/DocumentsScreen'), // Navigate to DocumentsScreen
+        },
       ]);
     } catch (error) {
       console.error('Error creating document:', error);
@@ -131,7 +210,10 @@ export default function AddDocumentScreen() {
     }
   };
 
-  // Disable the save button if not authenticated
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index));
+  };
+
   const isSaveDisabled = !userId || !documentName.trim() || images.length === 0 || isLoading;
 
   return (
@@ -169,9 +251,14 @@ export default function AddDocumentScreen() {
               
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Images</Text>
-                <TouchableOpacity style={styles.addImagesButton} onPress={pickImages}>
+                <TouchableOpacity style={styles.uploadImagesButton} onPress={uploadImages}>
                   <Ionicons name="images-outline" size={24} color="#636ae8" />
-                  <Text style={styles.addImagesButtonText}>Add Images</Text>
+                  <Text style={styles.uploadImagesButtonText}>Upload Images</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.scanImagesButton} onPress={scanImages}>
+                  <Ionicons name="camera-outline" size={24} color="#636ae8" />
+                  <Text style={styles.scanImagesButtonText}>Scan Images</Text>
                 </TouchableOpacity>
                 
                 {images.length > 0 && (
@@ -242,7 +329,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  addImagesButton: {
+  uploadImagesButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -252,8 +339,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: '#636ae8',
+    marginBottom: 12,
   },
-  addImagesButtonText: {
+  uploadImagesButtonText: {
+    fontSize: 16,
+    color: '#636ae8',
+    marginLeft: 8,
+  },
+  scanImagesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(99, 106, 232, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#636ae8',
+    marginBottom: 12,
+  },
+  scanImagesButtonText: {
     fontSize: 16,
     color: '#636ae8',
     marginLeft: 8,
@@ -315,4 +420,4 @@ const styles = StyleSheet.create({
     color: '#333',
     marginTop: 16,
   },
-}); 
+});

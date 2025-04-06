@@ -2,13 +2,12 @@ import React from 'react';
 import { StyleSheet, TouchableOpacity, Alert, Image, Text, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
 import { useFonts, Inter_400Regular } from '@expo-google-fonts/inter';
 import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for icons
 import { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import DocumentsScreen from './DocumentsScreen.tsx'; // Import the Documents screen
 import ChatsScreen from './chats.tsx'; // Import the Chats screen
+import { useRouter } from 'expo-router';
 
 const Tab = createBottomTabNavigator();
 
@@ -17,103 +16,14 @@ function HomeScreen() {
     Inter_400Regular,
   });
 
+  const router = useRouter();
+
   if (!fontsLoaded) {
     return null; // Wait for fonts to load
   }
 
-  const convertImageToBase64 = async (uri: string) => {
-    try {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      return base64;
-    } catch (error) {
-      console.error('Error converting image to Base64:', error);
-      Alert.alert('Error', 'Failed to process the image.');
-      return null;
-    }
-  };
-
-  const createJsonPayload = (base64Image: string) => {
-    return {
-      image: base64Image,
-      timestamp: new Date().toISOString(),
-      metadata: {
-        description: 'Scanned document',
-        userId: '12345',
-      },
-    };
-  };
-
-  const handleScanFile = async () => {
-    try {
-      const scannedImages: string[] = []; // Array to store Base64 strings of scanned images
-
-      const scanImage = async (): Promise<void> => {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission Denied', 'Camera access is required to scan documents.');
-          return;
-        }
-
-        const result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          quality: 1,
-        });
-
-        if (!result.canceled) {
-          const base64Image = await convertImageToBase64(result.assets[0].uri);
-          if (base64Image) {
-            scannedImages.push(base64Image); // Add the scanned image to the array
-          }
-
-          // Prompt the user to scan another image
-          return new Promise<void>((resolve) => {
-            Alert.alert(
-              'Scan Another?',
-              'Do you want to scan another image?',
-              [
-                { text: 'No', onPress: () => resolve() }, // Finish scanning
-                { text: 'Yes', onPress: async () => await scanImage().then(resolve) }, // Scan another image
-              ]
-            );
-          });
-        } else {
-          console.log('User canceled the scan');
-        }
-      };
-
-      await scanImage(); // Start the scanning process
-
-      // Ensure JSON payloads are created after all images are scanned
-      if (scannedImages.length > 0) {
-        const jsonPayloads = scannedImages.map((image, index) => ({
-          image,
-          timestamp: new Date().toISOString(),
-          metadata: {
-            description: `Scanned document ${index + 1}`,
-            userId: '12345',
-          },
-        }));
-
-        // Log each JSON payload individually
-        jsonPayloads.forEach((payload, index) => {
-          //console.log(`Payload ${index + 1}:`, payload);
-        });
-
-        Alert.alert('Success', `${scannedImages.length} images processed and JSON payloads created!`);
-      } else {
-        console.log('No images were scanned.');
-      }
-    } catch (error) {
-      console.error('Error during document scanning:', error);
-      Alert.alert('Error', 'An unexpected error occurred while scanning the document.');
-    }
-  };
-
-  const handleUploadFile = () => {
-    console.log('Upload File button pressed');
+  const handleGetStarted = () => {
+    router.push('/add-document'); // Navigate directly to AddDocumentScreen
   };
 
   return (
@@ -129,22 +39,13 @@ function HomeScreen() {
         Effortlessly scan and fill health forms with the help of Igna, your AI assistant nurse
       </Text>
 
-      {/* Scan Button */}
+      {/* Get Started Button */}
       <TouchableOpacity
-        style={styles.scanFileButton}
-        onPress={handleScanFile}
+        style={styles.getStartedButton}
+        onPress={handleGetStarted}
         activeOpacity={0.8}
       >
-        <Text style={styles.scanFileButtonText}>Scan File</Text>
-      </TouchableOpacity>
-
-      {/* Upload Button */}
-      <TouchableOpacity
-        style={styles.uploadFileButton}
-        onPress={handleUploadFile}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.uploadFileButtonText}>Upload File</Text>
+        <Text style={styles.getStartedButtonText}>Get Started</Text>
       </TouchableOpacity>
     </View>
   );
@@ -200,27 +101,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 30,
   },
-  scanFileButton: {
-    backgroundColor: '#636ae8',
+  getStartedButton: {
+    backgroundColor: '#4CAF50', // Green color for the button
     paddingVertical: 16,
     borderRadius: 10,
     alignItems: 'center',
     width: '90%',
-    marginBottom: 10,
+    marginTop: 20,
   },
-  scanFileButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  uploadFileButton: {
-    backgroundColor: '#636ae8',
-    paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    width: '90%',
-  },
-  uploadFileButtonText: {
+  getStartedButtonText: {
     color: 'white',
     fontWeight: '600',
     fontSize: 16,

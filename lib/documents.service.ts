@@ -1,5 +1,4 @@
 import { supabase } from './supabaseClient.ts';
-// Apparently this is a polyfill necessary to get uuid to work:
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -10,63 +9,51 @@ export interface Document {
   created_at: string;
   updated_at: string;
   user_id: string;
-  images: string[]; // Array of image URLs
+  images: Array<{
+    image: string;
+    timestamp: string;
+    metadata: {
+      description: string;
+      userId: string;
+    };
+  }>; // Array of JSON images
 }
 
-// Create a new document with images
-export async function createDocument(name: string, imageBase64Array: string[], userId: string): Promise<Document | null> {
+// Create a new document with an array of JSON images
+export async function createDocument(
+  name: string,
+  jsonImages: Array<{
+    image: string;
+    timestamp: string;
+    metadata: {
+      description: string;
+      userId: string;
+    };
+  }>,
+  userId: string
+): Promise<Document | null> {
   try {
     const documentId = uuidv4();
     const now = new Date().toISOString();
-    
-    // Upload each image to Supabase storage
-    const imageUrls = await Promise.all(
-      imageBase64Array.map(async (base64Image, index) => {
-        const filePath = `${userId}/${documentId}/${index}.jpg`;
-        
-        // Ensure the base64 string is correctly formatted
-        const base64Data = base64Image.split(',')[1] || base64Image;
-        
-        // Upload directly using base64 data without creating a Blob
-        const { data, error } = await supabase.storage
-          .from('documents')
-          .upload(filePath, base64Data, {
-            contentType: 'image/jpeg',
-            upsert: true,
-            encoding: 'base64'
-          });
-        
-        if (error) {
-          throw new Error(`Error uploading image: ${error.message}`);
-        }
-        
-        // Get the public URL for the uploaded image
-        const { data: publicUrl } = supabase.storage
-          .from('documents')
-          .getPublicUrl(filePath);
-        
-        return publicUrl.publicUrl;
-      })
-    );
-    
-    // Create document record in database
+
+    // Insert the document with the array of JSON images
     const { data, error } = await supabase
-      .from('documents')
+      .from('documents') // Replace with your Supabase table name
       .insert({
         id: documentId,
         name,
         created_at: now,
         updated_at: now,
         user_id: userId,
-        images: imageUrls
+        images: jsonImages, // Save the array of JSON images
       })
       .select()
       .single();
-    
+
     if (error) {
       throw new Error(`Error creating document: ${error.message}`);
     }
-    
+
     return data;
   } catch (error) {
     console.error('Error in createDocument:', error);

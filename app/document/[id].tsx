@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { getDocumentById, Document } from '../../lib/documents.service.ts';
 import { startDocumentChat } from '../../lib/chat.service.ts';
-import { supabase } from '../../lib/supabaseClient.ts'; // Import Supabase client
+import { supabase } from '../../lib/supabaseClient.ts';
 
 const { width } = Dimensions.get('window');
 
@@ -51,52 +51,46 @@ export default function DocumentDetailScreen() {
     }
   };
 
-  const generateSignedUrls = async (imageUrls: string[]) => {
+  const generateSignedUrls = async (images: Array<{ image: string }>) => {
     try {
       const signedUrls = await Promise.all(
-        imageUrls.map(async (imageUrl) => {
-          // Check if this is a Supabase storage URL
-          if (imageUrl.includes('/storage/v1/object/public/')) {
+        images.map(async (imgObj) => {
+          const imageUrl = imgObj.image;
+
+          // Check if this is a Supabase storage URL using `indexOf`
+          if (imageUrl && imageUrl.indexOf('/storage/v1/object/public/') !== -1) {
             try {
-              // Extract the path from the URL
-              // Format: https://[project].supabase.co/storage/v1/object/public/[bucket]/[path]
               const urlObj = new URL(imageUrl);
               const pathParts = urlObj.pathname.split('/storage/v1/object/public/');
-              
               if (pathParts.length === 2) {
                 const bucketAndPath = pathParts[1];
-                // First segment is bucket name, rest is file path
                 const [bucket, ...pathSegments] = bucketAndPath.split('/');
                 const filePath = pathSegments.join('/');
-                
-                // Create a signed URL with 1 hour expiry
+
                 const { data, error } = await supabase.storage
                   .from(bucket)
                   .createSignedUrl(filePath, 60 * 60);
-                
+
                 if (error) {
                   console.error('Error creating signed URL:', error);
-                  return imageUrl; // Fallback to original URL
+                  return imageUrl; // Fallback to the original URL
                 }
-                
-                // Return the signed URL if successful, otherwise fall back to original URL
+
                 return data?.signedUrl || imageUrl;
               }
             } catch (error) {
               console.error('Error creating signed URL:', error);
             }
           }
-          
-          // Return original URL if not a Supabase URL or if signing failed
-          return imageUrl;
+
+          return imageUrl; // Return the original URL if not a Supabase URL or if signing failed
         })
       );
-      
+
       setSignedImageUrls(signedUrls);
     } catch (error) {
       console.error('Error generating signed URLs:', error);
-      // Fallback to original URLs
-      setSignedImageUrls(imageUrls);
+      setSignedImageUrls(images.map((imgObj) => imgObj.image));
     }
   };
 
@@ -157,7 +151,7 @@ export default function DocumentDetailScreen() {
           <>
             <View style={styles.mainImageContainer}>
               <Image 
-                source={{ uri: signedImageUrls[selectedImageIndex] || document.images[selectedImageIndex] }} 
+                source={{ uri: signedImageUrls[selectedImageIndex] || document.images[selectedImageIndex].image }} 
                 style={styles.mainImage}
                 resizeMode="contain"
               />
@@ -176,7 +170,7 @@ export default function DocumentDetailScreen() {
                     onPress={() => setSelectedImageIndex(index)}
                   >
                     <Image 
-                      source={{ uri: signedImageUrls[index] || item }} 
+                      source={{ uri: signedImageUrls[index] || item.image }} 
                       style={styles.thumbnail} 
                     />
                   </TouchableOpacity>
