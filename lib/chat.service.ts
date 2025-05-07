@@ -16,78 +16,77 @@ export interface ChatSession {
 
 // Function to start a new chat with a document (if provided)
 export async function startDocumentChat(document?: Document): Promise<ChatSession> {
-  console.log(document != null ? JSON.stringify(document) : "No document provided.")
   const systemMessage: Message = {
     role: 'system',
-    content: document 
+    content: document
       ? `You are a helpful assistant analyzing document images. Help the user understand from these documents. Maintain a friendly personality, and define any key medical terms in an easy to understand way. Avoid using big words. Respond in the user's language.`
-      : 'You are a helpful assistant. Respond to the user\'s questions concisely and accurately.'
+      : 'You are a helpful assistant. Respond to the user\'s questions concisely and accurately.',
   };
-  
+
   const initialMessages: Message[] = [systemMessage];
-  
-  // If document is provided, add document images to context
+
   if (document && document.images.length > 0) {
-    // Generate signed URLs for each image
     const signedImageUrls = await Promise.all(
       document.images.map(async (imageUrl) => {
-        // Check if this is a Supabase storage URL
-        if (imageUrl.includes('/storage/v1/object/public/')) {
+        if (imageUrl.startsWith('data:image')) {
+          // Upload Base64 image to Supabase Storage
+          const base64Data = imageUrl.split(',')[1];
+          const filePath = `${document.id}/${Date.now()}.jpg`;
+          const { data, error } = await supabase.storage
+            .from('documents')
+            .upload(filePath, Buffer.from(base64Data, 'base64'), {
+              contentType: 'image/jpeg',
+            });
+
+          if (error) {
+            console.error('Error uploading Base64 image:', error);
+            return null;
+          }
+
+          return supabase.storage.from('documents').getPublicUrl(filePath).data.publicUrl;
+        } else if (imageUrl.includes('/storage/v1/object/public/')) {
+          // Generate signed URL for Supabase Storage image
           try {
-            // Extract the path from the URL
-            // Format: https://[project].supabase.co/storage/v1/object/public/[bucket]/[path]
             const urlObj = new URL(imageUrl);
             const pathParts = urlObj.pathname.split('/storage/v1/object/public/');
-            
             if (pathParts.length === 2) {
               const bucketAndPath = pathParts[1];
-              // First segment is bucket name, rest is file path
               const [bucket, ...pathSegments] = bucketAndPath.split('/');
               const filePath = pathSegments.join('/');
-              
-              // Create a signed URL with 1 hour expiry
               const { data } = await supabase.storage
                 .from(bucket)
                 .createSignedUrl(filePath, 60 * 60);
-              
-              // Return the signed URL if successful, otherwise fall back to original URL
               return data?.signedUrl || imageUrl;
             }
           } catch (error) {
             console.error('Error creating signed URL:', error);
           }
         }
-        
-        // Return original URL if not a Supabase URL or if signing failed
-        return imageUrl;
+        return imageUrl; // Return original URL if not a Supabase URL or Base64
       })
-    );
-    
-    const imageMessages: Array<{ type: string; image_url: { url: string } }> = 
-      signedImageUrls.map(imageUrl => ({
-        type: 'image_url',
-        image_url: { url: imageUrl }
-      }));
-    
+    ).then((urls) => urls.filter((url) => url !== null)); // Filter out null values
+
+    const imageMessages = signedImageUrls.map((imageUrl) => ({
+      type: 'image_url',
+      image_url: { url: imageUrl },
+    }));
+
     const userMessage: Message = {
       role: 'user',
       content: [
         { type: 'text', text: `I'd like to discuss this document titled "${document.name}".` },
-        ...imageMessages
-      ]
+        ...imageMessages,
+      ],
     };
-    
+
     initialMessages.push(userMessage);
   }
-  
-  console.log("Chat service: startDocumentChat: initialMessages")
-  console.log(JSON.stringify(initialMessages))
 
   return {
     id: Date.now().toString(),
     title: document?.name || 'New Chat',
     messages: initialMessages,
-    documentId: document?.id
+    documentId: document?.id,
   };
 }
 
@@ -165,4 +164,4 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string)
       messages: [...chatSession.messages, { role: 'user', content: userMessage }, errorMessage]
     };
   }
-} 
+}

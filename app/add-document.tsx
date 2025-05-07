@@ -78,35 +78,38 @@ export default function AddDocumentScreen({ onDocumentAdded }: { onDocumentAdded
     try {
       // Request media library permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
       if (status !== 'granted') {
         Alert.alert('Permission Required', 'Please allow access to your photo library to pick images.');
         return;
       }
-      
-      // Launch the image picker with better quality
+
+      // Launch the image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 1, // Use maximum quality
         allowsEditing: false,
       });
-      
+
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setIsLoading(true); // Show loading indicator while processing images
-        
+
         try {
-          // Process each selected image to JPEG
+          // Process each selected image to Base64
           const processedImages = await Promise.all(
             result.assets.map(async (asset) => {
-              // Convert any image to JPEG format
-              const base64 = await convertToJpeg(asset.uri);
-              // Return with proper JPEG MIME type
+              const base64 = asset.base64
+                ? `data:image/jpeg;base64,${asset.base64}`
+                : await FileSystem.readAsStringAsync(asset.uri, {
+                    encoding: FileSystem.EncodingType.Base64,
+                  });
               return `data:image/jpeg;base64,${base64}`;
             })
           );
-          
-          setImages([...images, ...processedImages]);
+
+          // Add the processed images to the `images` state
+          setImages((prevImages) => [...prevImages, ...processedImages]);
+          Alert.alert('Success', `${processedImages.length} images uploaded successfully!`);
         } catch (processError) {
           console.error('Error processing images:', processError);
           Alert.alert('Error', 'Failed to process selected images');
@@ -138,10 +141,8 @@ export default function AddDocumentScreen({ onDocumentAdded }: { onDocumentAdded
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
           quality: 0.7,
-          base64: true,
+          base64: true, // Ensure Base64 is included
         });
-
-        console.log('ImagePicker result:', result);
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
           // Convert the scanned image to Base64
@@ -156,8 +157,6 @@ export default function AddDocumentScreen({ onDocumentAdded }: { onDocumentAdded
             Alert.alert('Error', 'Failed to process the scanned image.');
             return;
           }
-
-          console.log('Base64 Image:', base64Image);
 
           // Add the scanned image to the array
           scannedImages.push(base64Image);

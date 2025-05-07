@@ -187,7 +187,6 @@ export default function DocumentsScreen() {
         }}
       />
     <View style={styles.container}>
-      <Text style={styles.title}>My Documents</Text>
 
       <TouchableOpacity style={styles.addButton} onPress={handleAddDocument}>
         <Ionicons name="add-circle" size={24} color="white" />
