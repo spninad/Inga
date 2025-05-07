@@ -20,7 +20,7 @@ export async function startDocumentChat(document?: Document): Promise<ChatSessio
   const systemMessage: Message = {
     role: 'system',
     content: document 
-      ? 'You are a helpful assistant analyzing document images. Help the user understand and extract information from these documents.'
+      ? `You are a helpful assistant analyzing document images. Help the user understand from these documents. Maintain a friendly personality, and define any key medical terms in an easy to understand way. Avoid using big words. Respond in the user's language.`
       : 'You are a helpful assistant. Respond to the user\'s questions concisely and accurately.'
   };
   
@@ -133,6 +133,7 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string)
     });
     
     if (error) {
+      console.error(`Complete error message: ${JSON.stringify(error)}`)
       throw new Error(`Error calling Supabase function: ${error.message}`);
     }
     

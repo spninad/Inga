@@ -55,6 +55,24 @@ export default function App() {
   return (
     <Tab.Navigator
       screenOptions={({ route }: { route: { name: string } }): BottomTabNavigationOptions => ({
+        headerShown: true,
+        // Configure large title display for iOS
+        headerLargeTitle: true,
+        headerLargeTitleStyle: {
+          fontSize: 34,
+          fontWeight: '700',
+        },
+        // Improve iOS title appearance
+        headerLargeTitleShadowVisible: false,
+        headerTransparent: false,
+        headerStyle: {
+          backgroundColor: '#FFFFFF',
+        },
+        headerTitleStyle: {
+          fontWeight: '600',
+        },
+        headerTintColor: '#333333',
+        // Tab bar styling
         tabBarActiveTintColor: '#636ae8',
         tabBarInactiveTintColor: 'gray',
         tabBarStyle: { backgroundColor: '#FFFFFF' },
@@ -73,9 +91,30 @@ export default function App() {
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Documents" component={DocumentsScreen} />
-      <Tab.Screen name="Chats" component={ChatsScreen} />
+      <Tab.Screen 
+        name="Home" 
+        component={HomeScreen} 
+        options={{
+          title: 'Inga',
+          // Apply specific configuration for the Home tab if needed
+        }}
+      />
+      <Tab.Screen 
+        name="Documents" 
+        component={DocumentsScreen} 
+        options={{
+          title: 'Documents',
+          // Apply specific configuration for the Documents tab if needed
+        }}
+      />
+      <Tab.Screen 
+        name="Chats" 
+        component={ChatsScreen} 
+        options={{
+          title: 'Chats',
+          // Apply specific configuration for the Chats tab if needed
+        }}
+      />
     </Tab.Navigator>
   );
 }

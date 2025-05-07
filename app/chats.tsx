@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { startDocumentChat } from '../lib/chat.service.ts';
 import { supabase } from '../lib/supabaseClient.ts';
 
@@ -116,52 +116,61 @@ export default function ChatsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Chats</Text>
+    <>
+      <Stack.Screen 
+        options={{
+          title: 'Chats',
+          headerLargeTitle: true,
+        }}
+      />
       
-      <TouchableOpacity style={styles.newChatButton} onPress={handleNewChat}>
-        <Ionicons name="add-circle" size={24} color="white" />
-        <Text style={styles.newChatButtonText}>New Chat</Text>
-      </TouchableOpacity>
-      
-      {chats.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="chatbubble-ellipses-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyStateText}>No chats yet</Text>
-          <Text style={styles.emptyStateSubText}>
-            Start a new chat or create one from a document
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={chats}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.chatItem}
-              onPress={() => handleChatPress(item.id)}
-            >
-              <View style={styles.chatIcon}>
-                <Ionicons 
-                  name={item.document_id ? "document-text" : "chatbubble-ellipses"} 
-                  size={24} 
-                  color="#636ae8" 
-                />
-              </View>
-              <View style={styles.chatInfo}>
-                <Text style={styles.chatTitle}>{item.title}</Text>
-                <Text style={styles.chatTimestamp}>
-                  {new Date(item.updated_at).toLocaleDateString()}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.chatsList}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-    </View>
+      <View style={styles.container}>
+        {/* Remove the title text since it will be in the header */}
+        
+        <TouchableOpacity style={styles.newChatButton} onPress={handleNewChat}>
+          <Ionicons name="add-circle" size={24} color="white" />
+          <Text style={styles.newChatButtonText}>New Chat</Text>
+        </TouchableOpacity>
+        
+        {chats.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="chatbubble-ellipses-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyStateText}>No chats yet</Text>
+            <Text style={styles.emptyStateSubText}>
+              Start a new chat or create one from a document
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={chats}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.chatItem}
+                onPress={() => handleChatPress(item.id)}
+              >
+                <View style={styles.chatIcon}>
+                  <Ionicons 
+                    name={item.document_id ? "document-text" : "chatbubble-ellipses"} 
+                    size={24} 
+                    color="#636ae8" 
+                  />
+                </View>
+                <View style={styles.chatInfo}>
+                  <Text style={styles.chatTitle}>{item.title}</Text>
+                  <Text style={styles.chatTimestamp}>
+                    {new Date(item.updated_at).toLocaleDateString()}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+              </TouchableOpacity>
+            )}
+            contentContainerStyle={styles.chatsList}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
+    </>
   );
 }
 
@@ -269,4 +278,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
     maxWidth: '80%',
   },
-}); 
+});

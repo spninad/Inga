@@ -35,8 +35,47 @@ export async function createDocument(
   try {
     const documentId = uuidv4();
     const now = new Date().toISOString();
-
-    // Insert the document with the array of JSON images
+    
+    // Upload each image to Supabase storage
+    const imageUrls = await Promise.all(
+      jsonImages.map(async (jsonImage, index) => {
+        var base64Image = jsonImage.image;
+        const filePath = `${userId}/${documentId}/${index}.jpg`;
+        
+        // Convert base64 string to Uint8Array
+        // This is more reliable for binary data upload
+        const base64Data = base64Image.split(',')[1] || base64Image;
+        const binaryString = atob(base64Data);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Upload the binary data
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .upload(filePath, bytes.buffer, {
+            contentType: 'image/jpeg',
+            upsert: true
+          });
+        
+        if (error) {
+          console.error('Storage error:', error);
+          throw new Error(`Error uploading image: ${error.message}`);
+        }
+        
+        // Get the public URL for the uploaded image
+        const { data: publicUrl } = supabase.storage
+          .from('documents')
+          .getPublicUrl(filePath);
+        
+        return publicUrl.publicUrl;
+      })
+    );
+    
+    // Create document record in database
     const { data, error } = await supabase
       .from('documents') // Replace with your Supabase table name
       .insert({

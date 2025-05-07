@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { getDocuments, Document, deleteDocument } from '../lib/documents.service';
 import { startDocumentChat } from '../lib/chat.service';
 import { supabase } from '../lib/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RealtimePostgresInsertPayload } from '@supabase/supabase-js'; // Import the type from Supabase
+import { Stack } from 'expo-router';
 
 export default function DocumentsScreen() {
+  // Add Stack.Screen component for this screen's title
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -36,6 +39,13 @@ export default function DocumentsScreen() {
       supabase.removeChannel(subscription);
     };
   }, []);
+  // Replace useEffect with useFocusEffect to refresh on navigation
+  useFocusEffect(
+    useCallback(() => {
+      // Get user and load documents each time the screen comes into focus
+      getUserAndLoadDocuments();
+    }, [])
+  );
 
   const getUserAndLoadDocuments = async () => {
     try {
@@ -169,6 +179,13 @@ export default function DocumentsScreen() {
   }
 
   return (
+    <>
+     <Stack.Screen 
+        options={{
+          title: 'Documents',
+          headerLargeTitle: true,
+        }}
+      />
     <View style={styles.container}>
       <Text style={styles.title}>My Documents</Text>
 
@@ -236,6 +253,7 @@ export default function DocumentsScreen() {
         />
       )}
     </View>
+    </>
   );
 }
 
