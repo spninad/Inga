@@ -51,11 +51,10 @@ export default function DocumentDetailScreen() {
     }
   };
 
-  const generateSignedUrls = async (images: Array<{ image: string }>) => {
+  const generateSignedUrls = async (images: string[]) => {
     try {
       const signedUrls = await Promise.all(
-        images.map(async (imgObj) => {
-          const imageUrl = imgObj.image;
+        images.map(async (imageUrl) => {
 
           // Check if this is a Supabase storage URL using `indexOf`
           if (imageUrl && imageUrl.indexOf('/storage/v1/object/public/') !== -1) {
@@ -90,7 +89,7 @@ export default function DocumentDetailScreen() {
       setSignedImageUrls(signedUrls);
     } catch (error) {
       console.error('Error generating signed URLs:', error);
-      setSignedImageUrls(images.map((imgObj) => imgObj.image));
+      setSignedImageUrls(images);
     }
   };
 
@@ -151,7 +150,7 @@ export default function DocumentDetailScreen() {
           <>
             <View style={styles.mainImageContainer}>
               <Image 
-                source={{ uri: signedImageUrls[selectedImageIndex] || document.images[selectedImageIndex].image }} 
+                source={{ uri: signedImageUrls[selectedImageIndex] || document.images[selectedImageIndex] }} 
                 style={styles.mainImage}
                 resizeMode="contain"
               />
@@ -170,7 +169,7 @@ export default function DocumentDetailScreen() {
                     onPress={() => setSelectedImageIndex(index)}
                   >
                     <Image 
-                      source={{ uri: signedImageUrls[index] || item.image }} 
+                      source={{ uri: signedImageUrls[index] || item }} 
                       style={styles.thumbnail} 
                     />
                   </TouchableOpacity>

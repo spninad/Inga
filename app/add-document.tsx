@@ -219,18 +219,8 @@ export default function AddDocumentScreen({ onDocumentAdded }: { onDocumentAdded
       });
             
 
-      // Convert images to JSON format
-      const jsonImages = images.map((image, index) => ({
-        image,
-        timestamp: new Date().toISOString(),
-        metadata: {
-          description: `Scanned document ${index + 1}`,
-          userId,
-        },
-      }));
-
-      // Save the document to Supabase
-      const document = await createDocument(documentName, jsonImages, userId);
+      // Save the document to Supabase with the array of image strings
+      const document = await createDocument(documentName, images, userId);
 
       if (!document) {
         throw new Error('Failed to create document');

@@ -9,37 +9,18 @@ export interface Document {
   created_at: string;
   updated_at: string;
   user_id: string;
-  images: Array<{
-    image: string;
-    timestamp: string;
-    metadata: {
-      description: string;
-      userId: string;
-    };
-  }>; // Array of JSON images
+  images: string[]; // Array of image URLs
 }
 
 // Create a new document with an array of JSON images
-export async function createDocument(
-  name: string,
-  jsonImages: Array<{
-    image: string;
-    timestamp: string;
-    metadata: {
-      description: string;
-      userId: string;
-    };
-  }>,
-  userId: string
-): Promise<Document | null> {
+export async function createDocument(name: string, imageBase64Array: string[], userId: string): Promise<Document | null> {
   try {
     const documentId = uuidv4();
     const now = new Date().toISOString();
     
     // Upload each image to Supabase storage
     const imageUrls = await Promise.all(
-      jsonImages.map(async (jsonImage, index) => {
-        var base64Image = jsonImage.image;
+      imageBase64Array.map(async (base64Image, index) => {
         const filePath = `${userId}/${documentId}/${index}.jpg`;
         
         // Convert base64 string to Uint8Array
@@ -77,22 +58,22 @@ export async function createDocument(
     
     // Create document record in database
     const { data, error } = await supabase
-      .from('documents') // Replace with your Supabase table name
+      .from('documents')
       .insert({
         id: documentId,
         name,
         created_at: now,
         updated_at: now,
         user_id: userId,
-        images: jsonImages, // Save the array of JSON images
+        images: imageUrls
       })
       .select()
       .single();
-
+    
     if (error) {
       throw new Error(`Error creating document: ${error.message}`);
     }
-
+    
     return data;
   } catch (error) {
     console.error('Error in createDocument:', error);

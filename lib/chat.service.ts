@@ -28,41 +28,46 @@ export async function startDocumentChat(document?: Document): Promise<ChatSessio
   if (document && document.images.length > 0) {
     const signedImageUrls = await Promise.all(
       document.images.map(async (imageUrl) => {
-        if (imageUrl.startsWith('data:image')) {
-          // Upload Base64 image to Supabase Storage
-          const base64Data = imageUrl.split(',')[1];
-          const filePath = `${document.id}/${Date.now()}.jpg`;
-          const { data, error } = await supabase.storage
-            .from('documents')
-            .upload(filePath, Buffer.from(base64Data, 'base64'), {
-              contentType: 'image/jpeg',
-            });
+        if (typeof imageUrl === 'string') {
+          if (imageUrl.startsWith('data:image')) {
+            // Upload Base64 image to Supabase Storage
+            const base64Data = imageUrl.split(',')[1];
+            const filePath = `${document.id}/${Date.now()}.jpg`;
+            const { data, error } = await supabase.storage
+              .from('documents')
+              .upload(filePath, Buffer.from(base64Data, 'base64'), {
+                contentType: 'image/jpeg',
+              });
 
-          if (error) {
-            console.error('Error uploading Base64 image:', error);
-            return null;
-          }
-
-          return supabase.storage.from('documents').getPublicUrl(filePath).data.publicUrl;
-        } else if (imageUrl.includes('/storage/v1/object/public/')) {
-          // Generate signed URL for Supabase Storage image
-          try {
-            const urlObj = new URL(imageUrl);
-            const pathParts = urlObj.pathname.split('/storage/v1/object/public/');
-            if (pathParts.length === 2) {
-              const bucketAndPath = pathParts[1];
-              const [bucket, ...pathSegments] = bucketAndPath.split('/');
-              const filePath = pathSegments.join('/');
-              const { data } = await supabase.storage
-                .from(bucket)
-                .createSignedUrl(filePath, 60 * 60);
-              return data?.signedUrl || imageUrl;
+            if (error) {
+              console.error('Error uploading Base64 image:', error);
+              return null;
             }
-          } catch (error) {
-            console.error('Error creating signed URL:', error);
+
+            return supabase.storage.from('documents').getPublicUrl(filePath).data.publicUrl;
+          } else if (imageUrl.includes('/storage/v1/object/public/')) {
+            // Generate signed URL for Supabase Storage image
+            try {
+              const urlObj = new URL(imageUrl);
+              const pathParts = urlObj.pathname.split('/storage/v1/object/public/');
+              if (pathParts.length === 2) {
+                const bucketAndPath = pathParts[1];
+                const [bucket, ...pathSegments] = bucketAndPath.split('/');
+                const filePath = pathSegments.join('/');
+                const { data } = await supabase.storage
+                  .from(bucket)
+                  .createSignedUrl(filePath, 60 * 60);
+                return data?.signedUrl || imageUrl;
+              }
+            } catch (error) {
+              console.error('Error creating signed URL:', error);
+            }
           }
+          return imageUrl; // Return original URL if not a Supabase URL or Base64
+        } else {
+          console.error('Invalid image format in document:', imageUrl);
+          return null;
         }
-        return imageUrl; // Return original URL if not a Supabase URL or Base64
       })
     ).then((urls) => urls.filter((url) => url !== null)); // Filter out null values
 
