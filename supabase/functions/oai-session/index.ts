@@ -54,8 +54,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Set default values if not provided
-    const model = params.model || "gpt-4o-realtime-preview-2024-12-17";
-    const voice = params.voice || "alloy";
+    const model = params.model || Deno.env.get("OAI_SESSION_MODEL") || "gpt-4o-realtime-preview-2024-12-17";
+    const voice = params.voice || Deno.env.get("OAI_SESSION_VOICE") || "alloy";
 
     // Request ephemeral token from OpenAI
     const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
