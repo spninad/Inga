@@ -93,13 +93,15 @@ export default function ChatScreen() {
   };
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !chatSession) return;
-    
+    const message = inputMessage.trim();
+ 
+    if (!message || !chatSession) return;
+
+    setInputMessage(''); // Clear input only if a message is sent
+
     try {
       setIsSending(true);
-      const message = inputMessage.trim();
-      setInputMessage('');
-      
+
       // Update UI immediately with user message
       const updatedSession = {
         ...chatSession,
@@ -109,20 +111,20 @@ export default function ChatScreen() {
         ]
       };
       setChatSession(updatedSession);
-      
+
       // Send message to OpenAI
       const responseSession = await sendMessage(chatSession, message);
-      
+
       // Update chat session with response
       setChatSession(responseSession);
-      
+
       // Save updated chat to AsyncStorage
       try {
         await AsyncStorage.setItem(`chat_${params.id}`, JSON.stringify(responseSession));
       } catch (storageError) {
         console.error('Error saving chat to AsyncStorage:', storageError);
       }
-      
+
       // Scroll to bottom
       setTimeout(() => {
         listRef.current?.scrollToEnd({ animated: true });
@@ -171,6 +173,7 @@ export default function ChatScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} // Adjust 80 as needed
       >
         {chatSession ? (
           <>
@@ -191,10 +194,16 @@ export default function ChatScreen() {
                 placeholder="Type a message..."
                 placeholderTextColor="#999"
                 multiline
+                keyboardType="default" // Ensures standard text keyboard
                 returnKeyType="send"
-                onSubmitEditing={handleSendMessage}
                 blurOnSubmit={false}
                 editable={!isSending}
+                onSubmitEditing={handleSendMessage}
+                onKeyPress={({ nativeEvent }) => {
+                  if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
+                    handleSendMessage();
+                  }
+                }}
               />
               
               <TouchableOpacity
@@ -332,4 +341,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-}); 
+});
