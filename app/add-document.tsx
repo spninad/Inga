@@ -229,7 +229,7 @@ export default function AddDocumentScreen({ onDocumentAdded }: { onDocumentAdded
       Alert.alert('Success', 'Document created successfully', [
         {
           text: 'OK',
-          onPress: () => router.push('/DocumentsScreen'), // Navigate to DocumentsScreen
+          onPress: () => router.back(), // Navigate back to the previous screen
         },
       ]);
     } catch (error) {
