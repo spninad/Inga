@@ -41,9 +41,38 @@ export default function ChatScreen() {
   // Load chat and messages from Supabase
   const loadChat = async () => {
     setIsLoading(true);
+    let chat;
     try {
-      // If new chat, create it
-      if (params.isNew === 'true') {
+
+      const { data: existingChats, error: chatError } = await supabase
+        .from('chats')
+        .select('*')
+        .eq('user_id', currentUserId)
+        .eq('documentId', params.documentId)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingChats) {
+        chat = existingChats;
+      }
+      if(chat){
+        const { data: messages, error: msgError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', chat.id)
+        .order('created_at', { ascending: true });
+
+        if (msgError) {
+          console.error('Error loading messages:', msgError);
+        }
+
+        setChatSession({
+          id: chat.id,
+          title: chat.title,
+          messages: messages ? messages.map(msg => ({ ...msg.content, role: msg.role })) : [],
+        });
+        
+      } else {
         let chatTitle = 'New Chat';
         if (params.documentId) {
           const document = await getDocumentById(params.documentId);
@@ -55,7 +84,7 @@ export default function ChatScreen() {
         // Create chat
         const { data: chat, error: chatError } = await supabase
           .from('chats')
-          .insert([{ user_id: currentUserId, title: chatTitle }])
+          .insert([{ user_id: currentUserId, title: chatTitle, documentId: params.documentId }])
           .select()
           .single();
 
@@ -79,38 +108,7 @@ export default function ChatScreen() {
           title: chat.title,
           messages: [introMessage.content],
         });
-      } else {
-        // Existing chat: load chat and messages
-        // Get chat info
-        const { data: chat, error: chatError } = await supabase
-          .from('chats')
-          .select('*')
-          .eq('id', params.id)
-          .single();
-
-        if (chatError || !chat) {
-          console.error('Error loading chat:', chatError);
-          setIsLoading(false);
-          return;
-        }
-
-        // Get messages
-        const { data: messages, error: msgError } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('chat_id', chat.id)
-          .order('created_at', { ascending: true });
-
-        if (msgError) {
-          console.error('Error loading messages:', msgError);
-        }
-
-        setChatSession({
-          id: chat.id,
-          title: chat.title,
-          messages: messages ? messages.map(msg => msg.content) : [],
-        });
-      }
+      }  
     } catch (error) {
       console.error('Error loading chat:', error);
     } finally {
@@ -123,30 +121,40 @@ export default function ChatScreen() {
     const message = inputMessage.trim();
     if (!message || !chatSession || !currentUserId) return;
     setInputMessage('');
+    setIsSending(true);
+    // Create the new message object
+    const newMessage = { type: 'text', text: message, role: 'user' };
+    // Optimistically update UI
+    setChatSession(prev => prev ? {
+      ...prev,
+      messages: [...prev.messages, newMessage],
+    } : prev);
     try {
-      setIsSending(true);
-      await supabase.from('messages').insert([
+      // Save to database
+      const { error } = await supabase.from('messages').insert([
         {
           chat_id: chatSession.id,
           user_id: currentUserId,
           content: { type: 'text', text: message },
-          role: 'user'
+          role: 'user',
         }
       ]);
-      // Reload messages
-      const { data: messages } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('chat_id', chatSession.id)
-        .order('created_at', { ascending: true });
-      setChatSession({
-        ...chatSession,
-        messages: messages ? messages.map(msg => msg.content) : [],
-      });
-      setTimeout(() => {
-        listRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      if (error) {
+        // Rollback optimistic update if error
+        setChatSession(prev => prev ? {
+          ...prev,
+          messages: prev.messages.filter((msg, idx, arr) => idx !== arr.length - 1),
+        } : prev);
+        console.error('Error sending message:', error);
+        // Optionally, show a user-facing error here
+      }
+      // DO NOT reload all messages here!
     } catch (error) {
+      // Rollback optimistic update if error
+      setChatSession(prev => prev ? {
+        ...prev,
+        messages: prev.messages.filter((msg, idx, arr) => idx !== arr.length - 1),
+      } : prev);
       console.error('Error sending message:', error);
     } finally {
       setIsSending(false);
