@@ -1,89 +1,115 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  FlatList, 
-  KeyboardAvoidingView, 
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { startDocumentChat, sendMessage, ChatSession, Message } from '../../lib/chat.service.ts';
+import { supabase } from '../../lib/supabaseClient.ts';
 import { getDocumentById } from '../../lib/documents.service.ts';
 
 export default function ChatScreen() {
-  const [chatSession, setChatSession] = useState<ChatSession | null>(null);
+  const [chatSession, setChatSession] = useState<{ id: string; title: string; messages: any[] } | null>(null);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const listRef = useRef<FlatList>(null);
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; isNew?: string; documentId?: string }>();
-  
+
   useEffect(() => {
-    loadChat();
+    const fetchUserId = async () => {
+      const { data } = await supabase.auth.getUser();
+      setCurrentUserId(data?.user?.id ?? null);
+    };
+    fetchUserId();
   }, []);
 
+  useEffect(() => {
+    if (currentUserId) loadChat();
+  }, [currentUserId]);
+
+  // Load chat and messages from Supabase
   const loadChat = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      
-      // Check if we need to create a new chat or load existing one
+      // If new chat, create it
       if (params.isNew === 'true') {
-        // This is a new chat, get chat session from AsyncStorage or create one
-        try {
-          const storedSessionStr = await AsyncStorage.getItem(`chat_${params.id}`);
-          if (storedSessionStr) {
-            setChatSession(JSON.parse(storedSessionStr));
-          } else {
-            // Create new chat with document if document_id is in the chat session
-            const existingChat = await startDocumentChat();
-            setChatSession(existingChat);
-            // Save to AsyncStorage
-            await AsyncStorage.setItem(`chat_${params.id}`, JSON.stringify(existingChat));
+        let chatTitle = 'New Chat';
+        if (params.documentId) {
+          const document = await getDocumentById(params.documentId);
+          if (document && document.name) {
+            chatTitle = document.name; // Use the document's name as the chat title
           }
-        } catch (storageError) {
-          console.error('AsyncStorage error:', storageError);
-          // Fallback to creating a new chat
-          const newChat = await startDocumentChat();
-          setChatSession(newChat);
         }
+
+        // Create chat
+        const { data: chat, error: chatError } = await supabase
+          .from('chats')
+          .insert([{ user_id: currentUserId, title: chatTitle }])
+          .select()
+          .single();
+
+        if (chatError || !chat) {
+          console.error('Error creating chat:', chatError);
+          setIsLoading(false);
+          return;
+        }
+
+        // Add intro message
+        const introMessage = {
+          chat_id: chat.id,
+          user_id: currentUserId,
+          content: { type: 'text', text: "👋 I am your AI assistant. Ask me anything about your document!" },
+          role: 'assistant'
+        };
+        await supabase.from('messages').insert([introMessage]);
+
+        setChatSession({
+          id: chat.id,
+          title: chat.title,
+          messages: [introMessage.content],
+        });
       } else {
-        // Load existing chat from AsyncStorage
-        try {
-          const storedSessionStr = await AsyncStorage.getItem(`chat_${params.id}`);
-          if (storedSessionStr) {
-            setChatSession(JSON.parse(storedSessionStr));
-          } else {
-            // If chat doesn't exist in AsyncStorage but has a document, load document and start chat
-            if (params.documentId) {
-              const document = await getDocumentById(params.documentId);
-              if (document) {
-                const newChat = await startDocumentChat(document);
-                setChatSession(newChat);
-                // Save to AsyncStorage
-                await AsyncStorage.setItem(`chat_${params.id}`, JSON.stringify(newChat));
-              }
-            } else {
-              // Create empty chat
-              const newChat = await startDocumentChat();
-              setChatSession(newChat);
-              // Save to AsyncStorage
-              await AsyncStorage.setItem(`chat_${params.id}`, JSON.stringify(newChat));
-            }
-          }
-        } catch (storageError) {
-          console.error('AsyncStorage error:', storageError);
-          // Fallback to creating a new chat
-          const newChat = await startDocumentChat();
-          setChatSession(newChat);
+        // Existing chat: load chat and messages
+        // Get chat info
+        const { data: chat, error: chatError } = await supabase
+          .from('chats')
+          .select('*')
+          .eq('id', params.id)
+          .single();
+
+        if (chatError || !chat) {
+          console.error('Error loading chat:', chatError);
+          setIsLoading(false);
+          return;
         }
+
+        // Get messages
+        const { data: messages, error: msgError } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('chat_id', chat.id)
+          .order('created_at', { ascending: true });
+
+        if (msgError) {
+          console.error('Error loading messages:', msgError);
+        }
+
+        setChatSession({
+          id: chat.id,
+          title: chat.title,
+          messages: messages ? messages.map(msg => msg.content) : [],
+        });
       }
     } catch (error) {
       console.error('Error loading chat:', error);
@@ -92,40 +118,31 @@ export default function ChatScreen() {
     }
   };
 
+  // Save message to Supabase
   const handleSendMessage = async () => {
     const message = inputMessage.trim();
- 
-    if (!message || !chatSession) return;
-
-    setInputMessage(''); // Clear input only if a message is sent
-
+    if (!message || !chatSession || !currentUserId) return;
+    setInputMessage('');
     try {
       setIsSending(true);
-
-      // Update UI immediately with user message
-      const updatedSession = {
+      await supabase.from('messages').insert([
+        {
+          chat_id: chatSession.id,
+          user_id: currentUserId,
+          content: { type: 'text', text: message },
+          role: 'user'
+        }
+      ]);
+      // Reload messages
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', chatSession.id)
+        .order('created_at', { ascending: true });
+      setChatSession({
         ...chatSession,
-        messages: [
-          ...chatSession.messages,
-          { role: 'user', content: message } as Message
-        ]
-      };
-      setChatSession(updatedSession);
-
-      // Send message to OpenAI
-      const responseSession = await sendMessage(chatSession, message);
-
-      // Update chat session with response
-      setChatSession(responseSession);
-
-      // Save updated chat to AsyncStorage
-      try {
-        await AsyncStorage.setItem(`chat_${params.id}`, JSON.stringify(responseSession));
-      } catch (storageError) {
-        console.error('Error saving chat to AsyncStorage:', storageError);
-      }
-
-      // Scroll to bottom
+        messages: messages ? messages.map(msg => msg.content) : [],
+      });
       setTimeout(() => {
         listRef.current?.scrollToEnd({ animated: true });
       }, 100);
@@ -137,13 +154,17 @@ export default function ChatScreen() {
   };
 
   // Render message item
-  const renderMessageItem = ({ item }: { item: Message }) => {
+  const renderMessageItem = ({ item }: { item: any }) => {
     const isUser = item.role === 'user';
-    
+    let messageText = '';
+    if (item && item.type === 'text') {
+      messageText = item.text;
+    }
+    if (messageText === '') return null;
     return (
       <View style={[styles.messageContainer, isUser ? styles.userMessage : styles.aiMessage]}>
         <Text style={[styles.messageText, isUser ? styles.userMessageText : styles.aiMessageText]}>
-          {typeof item.content === 'string' ? item.content : 'Content includes images (not displayed in chat view)'}
+          {messageText}
         </Text>
       </View>
     );
@@ -159,7 +180,7 @@ export default function ChatScreen() {
 
   return (
     <>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: chatSession?.title || 'Chat',
           headerLeft: () => (
@@ -167,69 +188,67 @@ export default function ChatScreen() {
               <Ionicons name="arrow-back" size={24} color="#333" />
             </TouchableOpacity>
           ),
-        }} 
+        }}
       />
       <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} // Adjust 80 as needed
-      >
-        {chatSession ? (
-          <>
-            <FlatList
-              ref={listRef}
-              data={chatSession.messages.filter(msg => msg.role !== 'system')}
-              keyExtractor={(_, index) => index.toString()}
-              renderItem={renderMessageItem}
-              contentContainerStyle={styles.chatList}
-              onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
-            />
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={inputMessage}
-                onChangeText={setInputMessage}
-                placeholder="Type a message..."
-                placeholderTextColor="#999"
-                multiline
-                keyboardType="default" // Ensures standard text keyboard
-                returnKeyType="send"
-                blurOnSubmit={false}
-                editable={!isSending}
-                onSubmitEditing={handleSendMessage}
-                onKeyPress={({ nativeEvent }) => {
-                  if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
-                    handleSendMessage();
-                  }
-                }}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        >
+          {chatSession ? (
+            <>
+              <FlatList
+                ref={listRef}
+                data={chatSession.messages}
+                keyExtractor={(_, index) => index.toString()}
+                renderItem={renderMessageItem}
+                contentContainerStyle={styles.chatList}
+                onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
               />
-              
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  value={inputMessage}
+                  onChangeText={setInputMessage}
+                  placeholder="Type a message..."
+                  placeholderTextColor="#999"
+                  multiline
+                  keyboardType="default"
+                  returnKeyType="send"
+                  blurOnSubmit={false}
+                  editable={!isSending}
+                  onSubmitEditing={handleSendMessage}
+                  onKeyPress={({ nativeEvent }) => {
+                    if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
+                      handleSendMessage();
+                    }
+                  }}
+                />
+                <TouchableOpacity
+                  style={[styles.sendButton, (!inputMessage.trim() || isSending) && styles.disabledButton]}
+                  onPress={handleSendMessage}
+                  disabled={!inputMessage.trim() || isSending}
+                >
+                  {isSending ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <Ionicons name="send" size={20} color="white" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>Failed to load chat</Text>
               <TouchableOpacity
-                style={[styles.sendButton, (!inputMessage.trim() || isSending) && styles.disabledButton]}
-                onPress={handleSendMessage}
-                disabled={!inputMessage.trim() || isSending}
+                style={styles.retryButton}
+                onPress={loadChat}
               >
-                {isSending ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Ionicons name="send" size={20} color="white" />
-                )}
+                <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
-          </>
-        ) : (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>Failed to load chat</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={loadChat}
-            >
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
     </>
@@ -243,10 +262,6 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,

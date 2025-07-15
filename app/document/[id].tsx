@@ -100,7 +100,7 @@ export default function DocumentDetailScreen() {
       const chatSession = await startDocumentChat(document);
       router.push({
         pathname: '/chat/[id]',
-        params: { id: chatSession.id, isNew: 'true' }
+        params: { id: chatSession.id, isNew: 'true', documentId: document.id}
       });
     } catch (error) {
       console.error('Error starting chat with document:', error);
