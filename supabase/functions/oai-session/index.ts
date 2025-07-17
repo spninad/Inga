@@ -54,7 +54,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Set default values if not provided
-    const model = params.model || Deno.env.get("OAI_SESSION_MODEL") || "gpt-4o-realtime-preview-2024-12-17";
+    const model = params.model || Deno.env.get("OAI_SESSION_MODEL") || "gpt-4o";
     const voice = params.voice || Deno.env.get("OAI_SESSION_VOICE") || "alloy";
 
     // Request ephemeral token from OpenAI
@@ -101,6 +101,6 @@ Deno.serve(async (req: Request) => {
   curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/oai-session' \
     --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
     --header 'Content-Type: application/json' \
-    --data '{"model":"gpt-4o-realtime-preview-2024-12-17","voice":"alloy"}'
+    --data '{"model":"gpt-4o","voice":"alloy"}'
 
 */
