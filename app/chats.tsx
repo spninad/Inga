@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, Stack } from 'expo-router';
+import { useRouter, Stack, useFocusEffect } from 'expo-router';
 import { startDocumentChat } from '../lib/chat.service.ts';
 import { supabase } from '../lib/supabaseClient.ts';
 
@@ -24,6 +24,15 @@ export default function ChatsScreen() {
     // Get the current user and fetch chats
     getUserAndFetchChats();
   }, []);
+
+  // Refresh chats when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (userId) {
+        fetchChats(userId);
+      }
+    }, [userId])
+  );
 
   const getUserAndFetchChats = async () => {
     try {
@@ -77,14 +86,33 @@ export default function ChatsScreen() {
       return;
     }
     
-    // Create a new empty chat
-    const newChat = await startDocumentChat();
-    
-    // Navigate to the chat screen
-    router.push({
-      pathname: '/chat/[id]',
-      params: { id: newChat.id, isNew: 'true' }
-    });
+    try {
+      // Create a new chat directly in the database
+      const { data: chat, error } = await supabase
+        .from('chats')
+        .insert([{ 
+          user_id: userId, 
+          title: 'New Chat',
+          document_id: null
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating chat:', error);
+        Alert.alert('Error', 'Failed to create new chat');
+        return;
+      }
+
+      // Navigate to the chat screen with the actual database ID
+      router.push({
+        pathname: '/chat/[id]',
+        params: { id: chat.id, isNew: 'true' }
+      });
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+      Alert.alert('Error', 'Failed to create new chat');
+    }
   };
 
   const handleChatPress = (chatId: string) => {

@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabaseClient.ts';
 import { getDocumentById } from '../../lib/documents.service.ts';
+import { sendMessage, ChatSession, Message } from '../../lib/chat.service.ts';
 
 export default function ChatScreen() {
   const [chatSession, setChatSession] = useState<{ id: string; title: string; messages: any[] } | null>(null);
@@ -41,74 +42,104 @@ export default function ChatScreen() {
   // Load chat and messages from Supabase
   const loadChat = async () => {
     setIsLoading(true);
-    let chat;
     try {
-
-      const { data: existingChats, error: chatError } = await supabase
+      // Try to find existing chat by ID from params
+      const { data: existingChat, error: chatError } = await supabase
         .from('chats')
         .select('*')
+        .eq('id', params.id)
         .eq('user_id', currentUserId)
-        .eq('documentId', params.documentId)
-        .limit(1)
-        .maybeSingle();
+        .single();
 
-      if (existingChats) {
-        chat = existingChats;
+      if (chatError && chatError.code !== 'PGRST116') {
+        console.error('Error loading chat:', chatError);
+        throw chatError;
       }
-      if(chat){
-        const { data: messages, error: msgError } = await supabase
+
+      let chat = existingChat;
+
+      // If chat doesn't exist and we have a documentId, try to find or create chat for that document
+      if (!chat && params.documentId) {
+        const { data: documentChat, error: docChatError } = await supabase
+          .from('chats')
+          .select('*')
+          .eq('user_id', currentUserId)
+          .eq('document_id', params.documentId)
+          .limit(1)
+          .maybeSingle();
+
+        if (docChatError) {
+          console.error('Error finding document chat:', docChatError);
+        } else if (documentChat) {
+          chat = documentChat;
+        }
+      }
+
+      // If still no chat, create a new one
+      if (!chat) {
+        let chatTitle = 'New Chat';
+        if (params.documentId) {
+          const document = await getDocumentById(params.documentId);
+          if (document && document.name) {
+            chatTitle = document.name;
+          }
+        }
+
+        const { data: newChat, error: createError } = await supabase
+          .from('chats')
+          .insert([{ 
+            user_id: currentUserId, 
+            title: chatTitle, 
+            document_id: params.documentId || null
+          }])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating chat:', createError);
+          throw createError;
+        }
+
+        chat = newChat;
+
+        // Add intro message for new chats
+        const introMessage = {
+          chat_id: chat.id,
+          user_id: currentUserId,
+          content: { type: 'text', text: "👋 I am your AI assistant. Ask me anything!" },
+          role: 'assistant'
+        };
+        
+        const { error: msgError } = await supabase
+          .from('messages')
+          .insert([introMessage]);
+
+        if (msgError) {
+          console.error('Error creating intro message:', msgError);
+        }
+      }
+
+      // Load messages for the chat
+      const { data: messages, error: msgError } = await supabase
         .from('messages')
         .select('*')
         .eq('chat_id', chat.id)
         .order('created_at', { ascending: true });
 
-        if (msgError) {
-          console.error('Error loading messages:', msgError);
-        }
+      if (msgError) {
+        console.error('Error loading messages:', msgError);
+      }
 
-        setChatSession({
-          id: chat.id,
-          title: chat.title,
-          messages: messages ? messages.map(msg => ({ ...msg.content, role: msg.role })) : [],
-        });
+      setChatSession({
+        id: chat.id,
+        title: chat.title,
+        messages: messages ? messages.map(msg => ({ 
+          ...msg.content, 
+          role: msg.role,
+          id: msg.id
+        })) : [],
+      });
         
-      } else {
-        let chatTitle = 'New Chat';
-        if (params.documentId) {
-          const document = await getDocumentById(params.documentId);
-          if (document && document.name) {
-            chatTitle = document.name; // Use the document's name as the chat title
-          }
-        }
-
-        // Create chat
-        const { data: chat, error: chatError } = await supabase
-          .from('chats')
-          .insert([{ user_id: currentUserId, title: chatTitle, documentId: params.documentId }])
-          .select()
-          .single();
-
-        if (chatError || !chat) {
-          console.error('Error creating chat:', chatError);
-          setIsLoading(false);
-          return;
-        }
-
-        // Add intro message
-        const introMessage = {
-          chat_id: chat.id,
-          user_id: currentUserId,
-          content: { type: 'text', text: "👋 I am your AI assistant. Ask me anything about your document!" },
-          role: 'assistant'
-        };
-        await supabase.from('messages').insert([introMessage]);
-
-        setChatSession({
-          id: chat.id,
-          title: chat.title,
-          messages: [introMessage.content],
-        });
-      }  
     } catch (error) {
       console.error('Error loading chat:', error);
     } finally {
@@ -116,22 +147,26 @@ export default function ChatScreen() {
     }
   };
 
-  // Save message to Supabase
+  // Save message to Supabase and get LLM response
   const handleSendMessage = async () => {
     const message = inputMessage.trim();
     if (!message || !chatSession || !currentUserId) return;
+    
     setInputMessage('');
     setIsSending(true);
-    // Create the new message object
-    const newMessage = { type: 'text', text: message, role: 'user' };
-    // Optimistically update UI
+    
+    // Create the new user message object
+    const newUserMessage = { type: 'text', text: message, role: 'user' };
+    
+    // Optimistically update UI with user message
     setChatSession(prev => prev ? {
       ...prev,
-      messages: [...prev.messages, newMessage],
+      messages: [...prev.messages, newUserMessage],
     } : prev);
+
     try {
-      // Save to database
-      const { error } = await supabase.from('messages').insert([
+      // Save user message to database
+      const { error: userMsgError } = await supabase.from('messages').insert([
         {
           chat_id: chatSession.id,
           user_id: currentUserId,
@@ -139,23 +174,77 @@ export default function ChatScreen() {
           role: 'user',
         }
       ]);
-      if (error) {
-        // Rollback optimistic update if error
+
+      if (userMsgError) {
+        console.error('Error saving user message:', userMsgError);
+        // Rollback optimistic update
         setChatSession(prev => prev ? {
           ...prev,
           messages: prev.messages.filter((msg, idx, arr) => idx !== arr.length - 1),
         } : prev);
-        console.error('Error sending message:', error);
-        // Optionally, show a user-facing error here
+        return;
       }
-      // DO NOT reload all messages here!
+
+      // Prepare chat session for LLM call
+      const chatForLLM: ChatSession = {
+        id: chatSession.id,
+        title: chatSession.title,
+        messages: [...chatSession.messages, newUserMessage].map(msg => ({
+          role: msg.role as 'system' | 'user' | 'assistant',
+          content: msg.text || msg.content || ''
+        })),
+        documentId: params.documentId
+      };
+
+      // Get LLM response
+      const updatedChatSession = await sendMessage(chatForLLM, message);
+      
+      // Extract the assistant's response (last message)
+      const assistantMessage = updatedChatSession.messages[updatedChatSession.messages.length - 1];
+      
+      if (assistantMessage && assistantMessage.role === 'assistant') {
+        // Add assistant message to UI
+        const assistantUIMessage = { 
+          type: 'text', 
+          text: assistantMessage.content as string, 
+          role: 'assistant' 
+        };
+        
+        setChatSession(prev => prev ? {
+          ...prev,
+          messages: [...prev.messages, assistantUIMessage],
+        } : prev);
+
+        // Save assistant message to database
+        const { error: assistantMsgError } = await supabase.from('messages').insert([
+          {
+            chat_id: chatSession.id,
+            user_id: currentUserId,
+            content: { type: 'text', text: assistantMessage.content as string },
+            role: 'assistant',
+          }
+        ]);
+
+        if (assistantMsgError) {
+          console.error('Error saving assistant message:', assistantMsgError);
+        }
+      }
+
     } catch (error) {
-      // Rollback optimistic update if error
+      console.error('Error in message handling:', error);
+      
+      // Add error message to chat
+      const errorMessage = { 
+        type: 'text', 
+        text: 'I apologize, but I encountered an error processing your request. Please try again.', 
+        role: 'assistant' 
+      };
+      
       setChatSession(prev => prev ? {
         ...prev,
-        messages: prev.messages.filter((msg, idx, arr) => idx !== arr.length - 1),
+        messages: [...prev.messages, errorMessage],
       } : prev);
-      console.error('Error sending message:', error);
+      
     } finally {
       setIsSending(false);
     }
@@ -165,10 +254,20 @@ export default function ChatScreen() {
   const renderMessageItem = ({ item }: { item: any }) => {
     const isUser = item.role === 'user';
     let messageText = '';
-    if (item && item.type === 'text') {
+    
+    // Handle different message content formats
+    if (typeof item.text === 'string') {
+      messageText = item.text;
+    } else if (typeof item.content === 'string') {
+      messageText = item.content;
+    } else if (item.content && typeof item.content === 'object' && item.content.text) {
+      messageText = item.content.text;
+    } else if (item.type === 'text' && item.text) {
       messageText = item.text;
     }
-    if (messageText === '') return null;
+    
+    if (!messageText) return null;
+    
     return (
       <View style={[styles.messageContainer, isUser ? styles.userMessage : styles.aiMessage]}>
         <Text style={[styles.messageText, isUser ? styles.userMessageText : styles.aiMessageText]}>
@@ -209,7 +308,7 @@ export default function ChatScreen() {
               <FlatList
                 ref={listRef}
                 data={chatSession.messages}
-                keyExtractor={(_, index) => index.toString()}
+                keyExtractor={(item, index) => item.id ? item.id.toString() : `msg-${index}`}
                 renderItem={renderMessageItem}
                 contentContainerStyle={styles.chatList}
                 onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
@@ -227,11 +326,6 @@ export default function ChatScreen() {
                   blurOnSubmit={false}
                   editable={!isSending}
                   onSubmitEditing={handleSendMessage}
-                  onKeyPress={({ nativeEvent }) => {
-                    if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
-                      handleSendMessage();
-                    }
-                  }}
                 />
                 <TouchableOpacity
                   style={[styles.sendButton, (!inputMessage.trim() || isSending) && styles.disabledButton]}
