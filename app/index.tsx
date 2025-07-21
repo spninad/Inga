@@ -26,6 +26,10 @@ function HomeScreen() {
     router.push('/add-document'); // Navigate directly to AddDocumentScreen
   };
 
+  const handleScanForm = () => {
+    router.push('/forms/screens/FormScannerScreen');
+  };
+
   return (
     <View style={styles.container}>
       {/* Logo */}
@@ -46,6 +50,15 @@ function HomeScreen() {
         activeOpacity={0.8}
       >
         <Text style={styles.getStartedButtonText}>Get Started</Text>
+      </TouchableOpacity>
+
+      {/* Scan a Form Button */}
+      <TouchableOpacity
+        style={styles.scanFormButton}
+        onPress={handleScanForm}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.scanFormButtonText}>Scan a Form</Text>
       </TouchableOpacity>
     </View>
   );
@@ -149,6 +162,19 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   getStartedButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  scanFormButton: {
+    backgroundColor: '#007AFF', // Blue color for the button
+    paddingVertical: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    width: '90%',
+    marginTop: 10,
+  },
+  scanFormButtonText: {
     color: 'white',
     fontWeight: '600',
     fontSize: 16,

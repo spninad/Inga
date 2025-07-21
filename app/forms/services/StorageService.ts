@@ -1,37 +1,36 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import 'react-native-get-random-values'; // Import for side effects
+import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 
-const FORMS_STORAGE_KEY = 'completed_forms';
+const STORAGE_KEY = '@completed_forms';
 
-export interface CompletedForm {
-  id: string;
-  data: Record<string, string>;
-  createdAt: string;
-}
-
-export const saveForm = async (formData: Record<string, string>): Promise<void> => {
+async function saveForm(formData: Record<string, string>): Promise<void> {
   try {
     const existingForms = await getForms();
-    const newForm: CompletedForm = {
+    const newForm = {
       id: uuidv4(),
-      data: formData,
       createdAt: new Date().toISOString(),
+      ...formData,
     };
     const updatedForms = [...existingForms, newForm];
-                await AsyncStorage.setItem(FORMS_STORAGE_KEY, JSON.stringify(updatedForms));
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedForms));
   } catch (error) {
-    console.error('Failed to save form data:', error);
-    throw new Error('Failed to save form.');
+    console.error('Error saving form to storage', error);
+    throw error;
   }
-};
+}
 
-export const getForms = async (): Promise<CompletedForm[]> => {
+async function getForms(): Promise<any[]> {
   try {
-                const jsonValue = await AsyncStorage.getItem(FORMS_STORAGE_KEY);
+    const jsonValue = await AsyncStorage.getItem(STORAGE_KEY);
     return jsonValue != null ? JSON.parse(jsonValue) : [];
   } catch (error) {
-    console.error('Failed to retrieve form data:', error);
+    console.error('Error getting forms from storage', error);
     return [];
   }
+}
+
+export const StorageService = {
+  saveForm,
+  getForms,
 };
