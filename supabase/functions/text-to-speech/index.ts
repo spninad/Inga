@@ -27,36 +27,33 @@ serve(async (req: Request) => {
       });
     }
 
-    const { audioUri } = await req.json();
+    const { text } = await req.json();
 
-    if (!audioUri) {
-      return new Response(JSON.stringify({ error: 'Missing audioUri' }), {
+    if (!text) {
+      return new Response(JSON.stringify({ error: 'Missing text' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
     }
 
-    // Deno does not have a native 'atob' function for base64 decoding in this context.
-    // The audio data is expected to be a data URI (e.g., 'data:audio/m4a;base64,...').
-    // We need to extract the base64 part and convert it to a Blob.
-        const base64String = audioUri.substring(audioUri.indexOf(',') + 1);
-    const audioBytes = Uint8Array.from(atob(base64String), c => c.charCodeAt(0));
-    const audioBlob = new Blob([audioBytes], { type: 'audio/m4a' });
-
-    // Create a File-like object for the OpenAI API
-    const audioFile = new File([audioBlob], "audio.m4a", { type: "audio/m4a" });
-
-    const transcription = await openai.audio.transcriptions.create({
-      file: audioFile,
-      model: 'whisper-1',
+    const speechResponse = await openai.audio.speech.create({
+      model: 'tts-1',
+      voice: 'alloy',
+      input: text,
     });
 
-    return new Response(JSON.stringify({ transcription: transcription.text }), {
+    const audioArrayBuffer = await speechResponse.arrayBuffer();
+    const audioBase64 = btoa(
+      new Uint8Array(audioArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
+
+    return new Response(JSON.stringify({ audioBase64 }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
+
   } catch (error: any) {
-    console.error('Error processing audio:', error);
+    console.error('Error generating speech:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
