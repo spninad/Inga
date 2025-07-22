@@ -1,17 +1,9 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, Alert, Image, Text, View } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
+import { StyleSheet, TouchableOpacity, Image, Text, View } from 'react-native';
 import { useFonts, Inter_400Regular } from '@expo-google-fonts/inter';
-import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for icons
-import { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
-import DocumentsScreen from './DocumentsScreen.tsx'; // Import the Documents screen
-import ChatsScreen from './chats.tsx'; // Import the Chats screen
 import { useRouter } from 'expo-router';
 
-const Tab = createBottomTabNavigator();
-
-function HomeScreen() {
+export default function HomeScreen() {
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
   });
@@ -24,6 +16,10 @@ function HomeScreen() {
 
   const handleGetStarted = () => {
     router.push('/add-document'); // Navigate directly to AddDocumentScreen
+  };
+
+  const handleScanForm = () => {
+    router.push('/forms/screens/FormScannerScreen');
   };
 
   return (
@@ -47,75 +43,16 @@ function HomeScreen() {
       >
         <Text style={styles.getStartedButtonText}>Get Started</Text>
       </TouchableOpacity>
+
+      {/* Scan a Form Button */}
+      <TouchableOpacity
+        style={styles.scanFormButton}
+        onPress={handleScanForm}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.scanFormButtonText}>Scan a Form</Text>
+      </TouchableOpacity>
     </View>
-  );
-}
-
-export default function App() {
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }: { route: { name: string } }): BottomTabNavigationOptions => ({
-        headerShown: true,
-        // Configure large title display for iOS
-        headerLargeTitle: true,
-        headerLargeTitleStyle: {
-          fontSize: 34,
-          fontWeight: '700',
-        },
-        // Improve iOS title appearance
-        headerLargeTitleShadowVisible: false,
-        headerTransparent: false,
-        headerStyle: {
-          backgroundColor: '#FFFFFF',
-        },
-        headerTitleStyle: {
-          fontWeight: '600',
-        },
-        headerTintColor: '#333333',
-        // Tab bar styling
-        tabBarActiveTintColor: '#636ae8',
-        tabBarInactiveTintColor: 'gray',
-        tabBarStyle: { backgroundColor: '#FFFFFF' },
-        tabBarIcon: ({ color, size }: { color: string; size: number }) => {
-          let iconName: keyof typeof Ionicons.glyphMap | undefined;
-
-          if (route.name === 'Home') {
-            iconName = 'home'; // Icon for Home tab
-          } else if (route.name === 'Documents') {
-            iconName = 'document-text'; // Icon for Documents tab
-          } else if (route.name === 'Chats') {
-            iconName = 'chatbubbles'; // Icon for Chats tab
-          }
-
-          return <Ionicons name={iconName as 'home' | 'document-text'} size={size} color={color} />;
-        },
-      })}
-    >
-      <Tab.Screen 
-        name="Home" 
-        component={HomeScreen} 
-        options={{
-          title: 'Inga',
-          // Apply specific configuration for the Home tab if needed
-        }}
-      />
-      <Tab.Screen 
-        name="Documents" 
-        component={DocumentsScreen} 
-        options={{
-          title: 'Documents',
-          // Apply specific configuration for the Documents tab if needed
-        }}
-      />
-      <Tab.Screen 
-        name="Chats" 
-        component={ChatsScreen} 
-        options={{
-          title: 'Chats',
-          // Apply specific configuration for the Chats tab if needed
-        }}
-      />
-    </Tab.Navigator>
   );
 }
 
@@ -149,6 +86,19 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   getStartedButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  scanFormButton: {
+    backgroundColor: '#007AFF', // Blue color for the button
+    paddingVertical: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    width: '90%',
+    marginTop: 10,
+  },
+  scanFormButtonText: {
     color: 'white',
     fontWeight: '600',
     fontSize: 16,

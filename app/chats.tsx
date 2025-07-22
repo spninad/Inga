@@ -1,309 +1,179 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, Stack, useFocusEffect } from 'expo-router';
-import { startDocumentChat } from '../lib/chat.service.ts';
+import { useRouter, Stack, useFocusEffect, useNavigation } from 'expo-router';
+import { getChats, createNewChat, Chat } from '../lib/chat.service.ts';
 import { supabase } from '../lib/supabaseClient.ts';
-
-// Interface for Chat type
-interface Chat {
-  id: string;
-  title: string;
-  created_at: string;
-  document_id?: string;
-  user_id: string;
-}
 
 export default function ChatsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [chats, setChats] = useState<Chat[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
+  const navigation = useNavigation();
 
-  useEffect(() => {
-    // Get the current user and fetch chats
-    getUserAndFetchChats();
+  const fetchUserAndChats = useCallback(async (currentUserId: string) => {
+    try {
+      const fetchedChats = await getChats(currentUserId);
+      setChats(fetchedChats);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to fetch chats.');
+    }
   }, []);
 
-  // Refresh chats when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      if (userId) {
-        fetchChats(userId);
-      }
-    }, [userId])
-  );
-
-  const getUserAndFetchChats = async () => {
-    try {
-      // Get the current session
+  useEffect(() => {
+    const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) {
-        // User not authenticated
-        Alert.alert('Authentication Required', 'Please sign in to view your chats');
-        router.replace('/auth/login'); // Assuming you have a login screen
-        return;
+      if (session?.user) {
+        setUserId(session.user.id);
+        await fetchUserAndChats(session.user.id);
+      } else {
+        router.replace('/login');
       }
-      
-      // Store user ID for later use
-      setUserId(session.user.id);
-      
-      // Now fetch chats for this user
-      await fetchChats(session.user.id);
-    } catch (error) {
-      console.error('Error getting authentication:', error);
       setIsLoading(false);
-    }
-  };
+    };
 
-  const fetchChats = async (uid: string) => {
-    try {
-      setIsLoading(true);
-      
-      const { data, error } = await supabase
-        .from('chats')
-        .select('*')
-        .eq('user_id', uid)
-        .order('created_at', { ascending: false });
+    checkUser();
+  }, [router, fetchUserAndChats]);
 
-      if (error) {
-        throw error;
-      }
+  useEffect(() => {
+    if (!userId) return;
 
-      setChats(data || []);
-    } catch (error) {
-      console.error('Error fetching chats:', error);
-      Alert.alert('Error', 'Failed to load your chats');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const channel = supabase
+      .channel('public:chats')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chats', filter: `user_id=eq.${userId}` },
+        () => fetchUserAndChats(userId)
+      )
+      .subscribe();
 
-  const handleNewChat = async () => {
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, fetchUserAndChats]);
+
+  const handleCreateNewChat = useCallback(async () => {
     if (!userId) {
       Alert.alert('Authentication Required', 'Please sign in to create a chat');
       return;
     }
     
     try {
-      // Create a new chat directly in the database
-      const { data: chat, error } = await supabase
-        .from('chats')
-        .insert([{ 
-          user_id: userId, 
-          title: 'New Chat',
-          document_id: null
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating chat:', error);
-        Alert.alert('Error', 'Failed to create new chat');
-        return;
-      }
-
-      // Navigate to the chat screen with the actual database ID
-      router.push({
-        pathname: '/chat/[id]',
-        params: { id: chat.id, isNew: 'true' }
-      });
+      const newChat = await createNewChat(userId, 'New Chat');
+      router.push(`/chat/${newChat.id}`);
     } catch (error) {
-      console.error('Error creating new chat:', error);
-      Alert.alert('Error', 'Failed to create new chat');
+      Alert.alert('Error', 'Could not create a new chat. Please try again.');
     }
-  };
+  }, [userId, router]);
 
-  const handleChatPress = (chatId: string) => {
-    router.push({
-      pathname: '/chat/[id]',
-      params: { id: chatId }
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={handleCreateNewChat} style={{ marginRight: 15 }}>
+          <Ionicons name="add" size={30} color="#636ae8" />
+        </TouchableOpacity>
+      ),
     });
-  };
+  }, [navigation, handleCreateNewChat]);
+
+  const renderItem = ({ item }: { item: Chat }) => (
+    <TouchableOpacity style={styles.chatItem} onPress={() => router.push(`/chat/${item.id}`)}>
+      <Ionicons name="chatbubble-ellipses-outline" size={24} color="#636ae8" style={styles.chatIcon} />
+      <View style={styles.chatTextContainer}>
+        <Text style={styles.chatTitle}>{item.title}</Text>
+        <Text style={styles.chatDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={styles.centered}>
         <ActivityIndicator size="large" color="#636ae8" />
       </View>
     );
   }
 
-  // Display authentication required message if not logged in
-  if (!userId) {
-    return (
-      <View style={styles.authRequiredContainer}>
-        <Ionicons name="lock-closed" size={64} color="#ccc" />
-        <Text style={styles.authRequiredText}>Authentication Required</Text>
-        <Text style={styles.authRequiredSubText}>
-          Please sign in to view and manage your chats
-        </Text>
-      </View>
-    );
-  }
-
   return (
-    <>
-      <Stack.Screen 
-        options={{
-          title: 'Chats',
-          headerLargeTitle: true,
-        }}
-      />
-      
-      <View style={styles.container}>
-        {/* Remove the title text since it will be in the header */}
-        
-        <TouchableOpacity style={styles.newChatButton} onPress={handleNewChat}>
-          <Ionicons name="add-circle" size={24} color="white" />
-          <Text style={styles.newChatButtonText}>New Chat</Text>
-        </TouchableOpacity>
-        
-        {chats.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="chatbubble-ellipses-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyStateText}>No chats yet</Text>
-            <Text style={styles.emptyStateSubText}>
-              Start a new chat or create one from a document
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={chats}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.chatItem}
-                onPress={() => handleChatPress(item.id)}
-              >
-                <View style={styles.chatIcon}>
-                  <Ionicons 
-                    name={item.document_id ? "document-text" : "chatbubble-ellipses"} 
-                    size={24} 
-                    color="#636ae8" 
-                  />
-                </View>
-                <View style={styles.chatInfo}>
-                  <Text style={styles.chatTitle}>{item.title}</Text>
-                  <Text style={styles.chatTimestamp}>
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#ccc" />
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.chatsList}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
-      </View>
-    </>
+    <SafeAreaView style={styles.container}>
+      {chats.length === 0 ? (
+        <View style={styles.centered}>
+          <Text style={styles.emptyMessage}>No chats yet.</Text>
+          <TouchableOpacity onPress={handleCreateNewChat} style={styles.newChatButton}>
+            <Text style={styles.newChatButtonText}>Start a New Chat</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={chats}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    padding: 16,
+    backgroundColor: '#f8f9fa',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#333',
-  },
-  newChatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#636ae8',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-  },
-  newChatButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  chatsList: {
-    paddingBottom: 20,
+  listContainer: {
+    paddingHorizontal: 10,
+    paddingTop: 10,
   },
   chatItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: '#ffffff',
+    padding: 15,
+    borderRadius: 10,
     marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   chatIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(99, 106, 232, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
-  chatInfo: {
+  chatTextContainer: {
     flex: 1,
   },
   chatTitle: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: '600',
+    color: '#343a40',
   },
-  chatTimestamp: {
+  chatDate: {
     fontSize: 12,
-    color: '#999',
+    color: '#6c757d',
     marginTop: 4,
   },
-  emptyState: {
+  centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 50,
+    padding: 20,
   },
-  emptyStateText: {
+  emptyMessage: {
     fontSize: 18,
-    fontWeight: '500',
-    color: '#333',
-    marginTop: 16,
+    color: '#6c757d',
+    marginBottom: 20,
   },
-  emptyStateSubText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 8,
-    maxWidth: '80%',
+  newChatButton: {
+    backgroundColor: '#636ae8',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
   },
-  authRequiredContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 50,
-  },
-  authRequiredText: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#333',
-    marginTop: 16,
-  },
-  authRequiredSubText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 8,
-    maxWidth: '80%',
+  newChatButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
