@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Button, StyleSheet, Image, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { processForm } from '../services/FormProcessingService.js';
+import { processForm } from '../services/FormProcessingService.ts';
 
 export default function FormPreviewScreen() {
   const router = useRouter();

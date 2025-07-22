@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Button, StyleSheet, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { FormField } from '../services/FormProcessingService.js';
-import { StorageService } from '../services/StorageService.js';
+import { FormField } from '../services/FormProcessingService.ts';
+import { StorageService } from '../services/StorageService.ts';
 
 export default function ManualFormScreen() {
   const router = useRouter();

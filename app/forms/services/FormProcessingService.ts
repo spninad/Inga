@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/supabaseClient.js';
+import { supabase } from '../../../lib/supabaseClient.ts';
 import * as FileSystem from 'expo-file-system';
 
 export interface FormField {
