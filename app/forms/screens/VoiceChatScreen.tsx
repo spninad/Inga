@@ -4,9 +4,9 @@ import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '../../../lib/supabase.js';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { FormField } from '../services/FormProcessingService.js';
-import { StorageService } from '../services/StorageService.js';
-import { parseFormFields } from '../utils/formUtils.js';
+import { FormField } from '../services/FormProcessingService.ts';
+import { StorageService } from '../services/StorageService.ts';
+import { parseFormFields } from '../utils/formUtils.ts';
 
 interface Message {
   id: string;
