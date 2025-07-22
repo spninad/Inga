@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 
 export default function FormsLayout() {
   return (
-    <Stack initialRouteName="screens/FormScannerScreen">
+    <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen 
         name="screens/FormScannerScreen" 
         options={{ title: 'Scan Form' }} 

@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, ActivityIndicator, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { getDocuments, Document, deleteDocument } from '../lib/documents.service';
-import { startDocumentChat } from '../lib/chat.service';
-import { supabase } from '../lib/supabaseClient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getDocuments, Document, deleteDocument } from '../lib/documents.service.ts';
+import { startDocumentChat } from '../lib/chat.service.ts';
+import { supabase } from '../lib/supabaseClient.ts';
+import * as AsyncStorage from '@react-native-async-storage/async-storage';
 import { RealtimePostgresInsertPayload } from '@supabase/supabase-js'; // Import the type from Supabase
-import { Stack } from 'expo-router';
+
 
 export default function DocumentsScreen() {
   // Add Stack.Screen component for this screen's title
@@ -17,6 +17,7 @@ export default function DocumentsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
+  const navigation = useNavigation();
 
   useEffect(() => {
     getUserAndLoadDocuments();
@@ -80,17 +81,24 @@ export default function DocumentsScreen() {
     setDocuments((prevDocuments) => [newDocument, ...prevDocuments]); // Add the new document to the top of the list
   };
 
-  const handleAddDocument = () => {
+  const handleAddDocument = useCallback(() => {
     if (!userId) {
       Alert.alert('Authentication Required', 'Please sign in to add documents');
       return;
     }
 
-    router.push({
-      pathname: '/add-document',
-      params: { onDocumentAdded: handleDocumentAdded }, // Pass the callback function
+    router.push('/add-document');
+  }, [userId, router]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={handleAddDocument} style={{ marginRight: 15 }}>
+          <Ionicons name="add" size={30} color="#636ae8" />
+        </TouchableOpacity>
+      ),
     });
-  };
+  }, [navigation, handleAddDocument]);
 
   const handleChatWithDocument = async (document: Document) => {
     if (!userId) {
@@ -102,7 +110,7 @@ export default function DocumentsScreen() {
       const chatSession = await startDocumentChat(document);
       
       try {
-        await AsyncStorage.setItem(`chat_${chatSession.id}`, JSON.stringify(chatSession));
+        await (AsyncStorage as any).setItem(`chat_${chatSession.id}`, JSON.stringify(chatSession));
         console.log("Saved chat session to AsyncStorage:", chatSession.id);
       } catch (storageError) {
         console.error("AsyncStorage error:", storageError);
@@ -179,19 +187,7 @@ export default function DocumentsScreen() {
   }
 
   return (
-    <>
-     <Stack.Screen 
-        options={{
-          title: 'Documents',
-          headerLargeTitle: true,
-        }}
-      />
-    <View style={styles.container}>
-
-      <TouchableOpacity style={styles.addButton} onPress={handleAddDocument}>
-        <Ionicons name="add-circle" size={24} color="white" />
-        <Text style={styles.addButtonText}>Add Document</Text>
-      </TouchableOpacity>
+    <SafeAreaView style={styles.container}>
 
       {documents.length === 0 ? (
         <View style={styles.emptyState}>
@@ -251,8 +247,7 @@ export default function DocumentsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </View>
-    </>
+    </SafeAreaView>
   );
 }
 
