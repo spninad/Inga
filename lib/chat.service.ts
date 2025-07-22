@@ -22,11 +22,12 @@ export async function getChats(userId: string): Promise<Chat[]> {
 }
 
 export async function createNewChat(userId: string, title: string, documentId?: string): Promise<Chat> {
-  const chatData: { user_id: string; title: string; document_id?: string } = {
+  const chatData: any = {
     user_id: userId,
     title,
   };
 
+  // Only set document_id if documentId is provided - don't set it to null
   if (documentId) {
     chatData.document_id = documentId;
   }

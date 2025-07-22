@@ -85,13 +85,19 @@ export default function ChatScreen() {
           }
         }
 
+        const chatInsertData: any = { 
+          user_id: currentUserId, 
+          title: chatTitle
+        };
+
+        // Only set document_id if params.documentId is provided - don't set it to null
+        if (params.documentId) {
+          chatInsertData.document_id = params.documentId;
+        }
+
         const { data: newChat, error: createError } = await supabase
           .from('chats')
-          .insert([{ 
-            user_id: currentUserId, 
-            title: chatTitle, 
-            document_id: params.documentId || null
-          }])
+          .insert([chatInsertData])
           .select()
           .single();
 
