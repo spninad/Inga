@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabaseClient.ts';
 import { getDocumentById } from '../../lib/documents.service.ts';
+import { sendMessage } from '@/lib/chat.service.ts';
 
 export default function ChatScreen() {
   const [chatSession, setChatSession] = useState<{ id: string; title: string; messages: any[] } | null>(null);
@@ -98,7 +99,7 @@ export default function ChatScreen() {
         const introMessage = {
           chat_id: chat.id,
           user_id: currentUserId,
-          content: { type: 'text', text: "👋 I am your AI assistant. Ask me anything about your document!" },
+          content: "👋 I am your AI assistant. Ask me anything about your document!",
           role: 'assistant'
         };
         await supabase.from('messages').insert([introMessage]);
@@ -106,7 +107,7 @@ export default function ChatScreen() {
         setChatSession({
           id: chat.id,
           title: chat.title,
-          messages: [introMessage.content],
+          messages: [{ role: 'assistant', content: introMessage.content }],
         });
       }  
     } catch (error) {
@@ -123,39 +124,59 @@ export default function ChatScreen() {
     setInputMessage('');
     setIsSending(true);
     // Create the new message object
-    const newMessage = { type: 'text', text: message, role: 'user' };
+    const newMessage = { content: message, role: 'user' };
     // Optimistically update UI
     setChatSession(prev => prev ? {
       ...prev,
       messages: [...prev.messages, newMessage],
     } : prev);
+    let userMessageId = null;
     try {
-      // Save to database
-      const { error } = await supabase.from('messages').insert([
+      // Save user message to database
+      const { data: userMsgData, error: userMsgError } = await supabase.from('messages').insert([
         {
           chat_id: chatSession.id,
           user_id: currentUserId,
-          content: { type: 'text', text: message },
+          content: message,
           role: 'user',
         }
-      ]);
-      if (error) {
+      ]).select().single();
+      if (userMsgError) {
         // Rollback optimistic update if error
         setChatSession(prev => prev ? {
           ...prev,
           messages: prev.messages.filter((msg, idx, arr) => idx !== arr.length - 1),
         } : prev);
-        console.error('Error sending message:', error);
-        // Optionally, show a user-facing error here
+        console.error('Error sending message:', userMsgError);
+        setIsSending(false);
+        return;
       }
-      // DO NOT reload all messages here!
+      userMessageId = userMsgData?.id;
+      // Get assistant response from OpenAI via Supabase
+      const updatedSession = await sendMessage(chatSession, message);
+      // Find the assistant's message (last in updatedSession.messages)
+      const assistantMsg = updatedSession.messages[updatedSession.messages.length - 1];
+      // Update UI with assistant message
+      setChatSession(prev => prev ? {
+        ...prev,
+        messages: [...prev.messages, assistantMsg],
+      } : prev);
+      // Save assistant message to database
+      await supabase.from('messages').insert([
+        {
+          chat_id: chatSession.id,
+          user_id: null, // or system/assistant id if you have one
+          content: assistantMsg.content,
+          role: 'assistant',
+        }
+      ]);
     } catch (error) {
       // Rollback optimistic update if error
       setChatSession(prev => prev ? {
         ...prev,
         messages: prev.messages.filter((msg, idx, arr) => idx !== arr.length - 1),
       } : prev);
-      console.error('Error sending message:', error);
+      console.error('Error sending message or getting assistant response:', error);
     } finally {
       setIsSending(false);
     }
@@ -165,10 +186,19 @@ export default function ChatScreen() {
   const renderMessageItem = ({ item }: { item: any }) => {
     const isUser = item.role === 'user';
     let messageText = '';
-    if (item && item.type === 'text') {
-      messageText = item.text;
+
+    if (typeof item.content === 'string') {
+      messageText = item.content;
+    } else if (Array.isArray(item.content)) {
+      // If content is an array (OpenAI format), find the first text part
+      const textPart = item.content.find((c: any) => c.type === 'text');
+      if (textPart) messageText = textPart.text;
+    } else if (item.content && item.content.type === 'text') {
+      messageText = item.content.text;
     }
+
     if (messageText === '') return null;
+
     return (
       <View style={[styles.messageContainer, isUser ? styles.userMessage : styles.aiMessage]}>
         <Text style={[styles.messageText, isUser ? styles.userMessageText : styles.aiMessageText]}>

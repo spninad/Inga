@@ -1,5 +1,5 @@
-import { Document } from './documents.service.js';
-import { supabase } from './supabaseClient.ts';
+import { Document } from './documents.service';
+import { supabase } from './supabaseClient';
 import Constants from 'expo-constants';
 
 export interface Message {
@@ -100,13 +100,14 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string)
   try {
     // Add user message to the chat
     const updatedMessages: Message[] = [
-      ...chatSession.messages, 
-      { 
+      ...chatSession.messages,
+      {
         role: 'user' as const, 
-        content: userMessage 
+        content: userMessage
       }
     ];
     
+    console.log("updatedMessages: ", updatedMessages);
     // Check if any message contains images to determine which function to use
     const hasImages = updatedMessages.some(msg => 
       Array.isArray(msg.content) && 
@@ -118,16 +119,15 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string)
     
     // Get the current session auth token
     const { data: { session } } = await supabase.auth.getSession();
-    
     if (!session?.access_token) {
       throw new Error('User is not authenticated. Please sign in to continue.');
     }
-    
+
     // Call OpenAI API through Supabase function with authentication
     const { data, error } = await supabase.functions.invoke(functionName, {
       body: {
         messages: updatedMessages,
-        model: 'gpt-4o', // Vision model that can understand images
+        model: 'gpt-4o',
         max_tokens: 500,
         temperature: 0.7,
       },
@@ -135,21 +135,24 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string)
         Authorization: `Bearer ${session.access_token}`
       }
     });
-    
+
     if (error) {
-      console.error(`Complete error message: ${JSON.stringify(error)}`)
+      console.error(`Supabase function error: ${JSON.stringify(error)}`);
       throw new Error(`Error calling Supabase function: ${error.message}`);
     }
-    
+
     // Get the assistant's response
-    const assistantMessage = data.choices[0].message;
-    
+    const assistantMessage = data.choices?.[0]?.message;
+    if (!assistantMessage) {
+      throw new Error('No response from OpenAI API.');
+    }
+
     // Add the assistant's response to the messages
     updatedMessages.push({
       role: 'assistant',
       content: assistantMessage.content || ''
     });
-    
+
     // Return the updated chat session
     return {
       ...chatSession,
@@ -157,13 +160,11 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string)
     };
   } catch (error) {
     console.error('Error sending message:', error);
-    
     // Add an error message to the chat
     const errorMessage: Message = {
       role: 'assistant',
       content: 'I apologize, but I encountered an error processing your request. Please try again.'
     };
-    
     return {
       ...chatSession,
       messages: [...chatSession.messages, { role: 'user', content: userMessage }, errorMessage]

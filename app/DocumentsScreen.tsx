@@ -100,6 +100,7 @@ export default function DocumentsScreen() {
     
     try {
       const chatSession = await startDocumentChat(document);
+      console.log("chatSession: ", chatSession);
       
       try {
         await AsyncStorage.setItem(`chat_${chatSession.id}`, JSON.stringify(chatSession));
