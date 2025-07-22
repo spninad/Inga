@@ -3,6 +3,7 @@ import { View, Text, Button, StyleSheet, TextInput, ScrollView, KeyboardAvoiding
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { FormField } from '../services/FormProcessingService.ts';
 import { StorageService } from '../services/StorageService.ts';
+import { parseFormFields } from '../utils/formUtils.ts';
 
 export default function ManualFormScreen() {
   const router = useRouter();
@@ -12,21 +13,14 @@ export default function ManualFormScreen() {
   const [fields, setFields] = useState<FormField[]>([]);
 
   useEffect(() => {
-    if (formFieldsString) {
-      try {
-        const parsedFields = JSON.parse(formFieldsString);
-        setFields(parsedFields);
+    const formFieldsArray = parseFormFields(formFieldsString);
+    setFields(formFieldsArray);
 
-        // Initialize form state
-        const initialState = parsedFields.reduce((acc: Record<string, string>, field: FormField) => {
-          acc[field.fieldName] = '';
-          return acc;
-        }, {});
-        setFormState(initialState);
-      } catch (error) {
-        console.error('Failed to parse form fields:', error);
-      }
-    }
+    const initialState = formFieldsArray.reduce((acc: Record<string, string>, field: FormField) => {
+      acc[field.fieldName] = '';
+      return acc;
+    }, {});
+    setFormState(initialState);
   }, [formFieldsString]);
 
   const handleInputChange = (fieldName: string, value: string) => {

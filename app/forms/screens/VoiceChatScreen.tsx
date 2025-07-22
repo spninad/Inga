@@ -4,8 +4,9 @@ import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '../../../lib/supabase.js';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { FormField } from '../services/FormProcessingService.ts';
-import { StorageService } from '../services/StorageService.ts';
+import { FormField } from '../services/FormProcessingService.js';
+import { StorageService } from '../services/StorageService.js';
+import { parseFormFields } from '../utils/formUtils.js';
 
 interface Message {
   id: string;
@@ -30,22 +31,20 @@ export default function VoiceChatScreen() {
 
   useEffect(() => {
     if (formFieldsString) {
-      try {
-        const parsedFields: FormField[] = JSON.parse(formFieldsString);
-        setFields(parsedFields);
-        // Initial bot message
-                if (parsedFields.length > 0) {
-                              const initialFormData = parsedFields.reduce((acc, field) => {
-            acc[field.fieldName] = '';
-            return acc;
-          }, {} as Record<string, string>);
-          setFormData(initialFormData);
+      const formFieldsArray = parseFormFields(formFieldsString);
+      setFields(formFieldsArray);
 
-          const initialMessage = `Hello! I'm here to help you fill out the form. Let's start with the first field: ${parsedFields[0]?.label}`;
-          playAndHandleBotResponse(initialMessage);
-        }
-      } catch (error) {
-        console.error('Failed to parse form fields:', error);
+      if (formFieldsArray.length > 0) {
+        const initialFormData = formFieldsArray.reduce((acc: Record<string, string>, field: FormField) => {
+          acc[field.fieldName] = '';
+          return acc;
+        }, {} as Record<string, string>);
+        setFormData(initialFormData);
+
+        const initialMessage = `Hello! I'm here to help you fill out the form. Let's start with the first field: ${formFieldsArray[0]?.label}`;
+        playAndHandleBotResponse(initialMessage);
+      } else if (formFieldsString) { // Only log error if parsing actually failed
+        console.error('Failed to parse form fields');
         setMessages([
           {
             id: '1',
