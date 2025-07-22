@@ -75,7 +75,7 @@ export default function ChatScreen() {
         }
       }
 
-      // If still no chat, create a new one
+      // If still no chat, create a new one using the service function
       if (!chat) {
         let chatTitle = 'New Chat';
         if (params.documentId) {
@@ -85,28 +85,9 @@ export default function ChatScreen() {
           }
         }
 
-        const chatInsertData: any = { 
-          user_id: currentUserId, 
-          title: chatTitle
-        };
-
-        // Only set document_id if params.documentId is provided - don't set it to null
-        if (params.documentId) {
-          chatInsertData.document_id = params.documentId;
-        }
-
-        const { data: newChat, error: createError } = await supabase
-          .from('chats')
-          .insert([chatInsertData])
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating chat:', createError);
-          throw createError;
-        }
-
-        chat = newChat;
+        // Use the createNewChat service function which handles duplicates gracefully
+        const { createNewChat } = await import('../../lib/chat.service.ts');
+        chat = await createNewChat(currentUserId, chatTitle, params.documentId);
 
         // Add intro message for new chats
         const introMessage = {
