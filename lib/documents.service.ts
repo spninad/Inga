@@ -9,7 +9,7 @@ export interface Document {
   created_at: string;
   updated_at: string;
   user_id: string;
-  images: string[]; // Array of image URLs
+  images: string[]; // Array of base64 data URLs (data:image/jpeg;base64,...)
 }
 
 // Create a new document with an array of JSON images
@@ -17,45 +17,8 @@ export async function createDocument(name: string, imageBase64Array: string[], u
   try {
     const documentId = uuidv4();
     const now = new Date().toISOString();
-    
-    // Upload each image to Supabase storage
-    const imageUrls = await Promise.all(
-      imageBase64Array.map(async (base64Image, index) => {
-        const filePath = `${userId}/${documentId}/${index}.jpg`;
-        
-        // Convert base64 string to Uint8Array
-        // This is more reliable for binary data upload
-        const base64Data = base64Image.split(',')[1] || base64Image;
-        const binaryString = atob(base64Data);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        
-        // Upload the binary data
-        const { data, error } = await supabase.storage
-          .from('documents')
-          .upload(filePath, bytes.buffer, {
-            contentType: 'image/jpeg',
-            upsert: true
-          });
-        
-        if (error) {
-          console.error('Storage error:', error);
-          throw new Error(`Error uploading image: ${error.message}`);
-        }
-        
-        // Get the public URL for the uploaded image
-        const { data: publicUrl } = supabase.storage
-          .from('documents')
-          .getPublicUrl(filePath);
-        
-        return publicUrl.publicUrl;
-      })
-    );
-    
+    // Store the base64 data URLs directly in the images array
+    const images = imageBase64Array;
     // Create document record in database
     const { data, error } = await supabase
       .from('documents')
@@ -65,15 +28,13 @@ export async function createDocument(name: string, imageBase64Array: string[], u
         created_at: now,
         updated_at: now,
         user_id: userId,
-        images: imageUrls
+        images
       })
       .select()
       .single();
-    
     if (error) {
       throw new Error(`Error creating document: ${error.message}`);
     }
-    
     return data;
   } catch (error) {
     console.error('Error in createDocument:', error);
@@ -145,36 +106,32 @@ export async function updateDocument(documentId: string, updates: Partial<Docume
   }
 }
 
-// Delete a document and its images
+// Delete a document and its related chats
 export async function deleteDocument(documentId: string, userId: string): Promise<boolean> {
   try {
-    // First get the document to access its images
-    const document = await getDocumentById(documentId);
-    
-    if (!document) {
-      throw new Error('Document not found');
+    console.log('Attempting to delete chats for document:', documentId);
+    // First, delete all chats with this documentId
+    const { error: chatError } = await supabase
+      .from('chats')
+      .delete()
+      .eq('documentId', documentId);
+    if (chatError) {
+      console.error('Error deleting related chats:', chatError);
+      throw new Error(`Error deleting related chats: ${chatError.message}`);
     }
-    
-    // Delete images from storage
-    const { error: storageError } = await supabase.storage
-      .from('documents')
-      .remove([`${userId}/${documentId}`]);
-    
-    if (storageError) {
-      console.error('Error removing images:', storageError);
-      // Continue with document deletion even if image deletion fails
-    }
-    
-    // Delete the document record
+    console.log('Related chats deleted for document:', documentId);
+
+    // Now delete the document itself
+    console.log('Attempting to delete document:', documentId);
     const { error } = await supabase
       .from('documents')
       .delete()
       .eq('id', documentId);
-    
     if (error) {
+      console.error('Supabase delete error:', error);
       throw new Error(`Error deleting document: ${error.message}`);
     }
-    
+    console.log('Document deleted successfully:', documentId);
     return true;
   } catch (error) {
     console.error('Error in deleteDocument:', error);

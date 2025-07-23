@@ -16,6 +16,7 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabaseClient.ts';
 import { getDocumentById } from '../../lib/documents.service.ts';
 import { sendMessage } from '@/lib/chat.service.ts';
+import { Document } from '../../lib/documents.service.ts';
 
 export default function ChatScreen() {
   const [chatSession, setChatSession] = useState<{ id: string; title: string; messages: any[] } | null>(null);
@@ -152,8 +153,14 @@ export default function ChatScreen() {
         return;
       }
       userMessageId = userMsgData?.id;
-      // Get assistant response from OpenAI via Supabase
-      const updatedSession = await sendMessage(chatSession, message);
+      // Fetch the document and send it with every message
+      let document: Document | undefined = undefined;
+      if (params.documentId) {
+        const docResult = await getDocumentById(params.documentId);
+        if (docResult) document = docResult;
+      }
+      // Get assistant response from OpenAI via Supabase, always passing the document (or undefined)
+      const updatedSession = await sendMessage(chatSession, message, document);
       // Find the assistant's message (last in updatedSession.messages)
       const assistantMsg = updatedSession.messages[updatedSession.messages.length - 1];
       // Update UI with assistant message
