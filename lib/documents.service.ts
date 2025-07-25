@@ -111,13 +111,36 @@ export async function deleteDocument(documentId: string, userId: string): Promis
   try {
     console.log('Attempting to delete chats for document:', documentId);
     // First, delete all chats with this documentId
-    const { error: chatError } = await supabase
+    const { data: chats, error: chatError } = await supabase
+      .from('chats')
+      .select('id')
+      .eq('documentId', documentId);
+
+    if (chatError) {
+      console.error('Error fetching related chats:', chatError);
+      throw new Error(`Error fetching related chats: ${chatError.message}`);
+    }
+
+    if (chats && chats.length > 0) {
+      const chatIds = chats.map((chat: { id: string }) => chat.id);
+      const { error: messagesError } = await supabase
+        .from('messages')
+        .delete()
+        .in('chat_id', chatIds);
+      if (messagesError) {
+        console.error('Error deleting related messages:', messagesError);
+      }
+    }
+
+    // Now delete the chats themselves
+    const { error: deleteChatsError } = await supabase
       .from('chats')
       .delete()
       .eq('documentId', documentId);
-    if (chatError) {
-      console.error('Error deleting related chats:', chatError);
-      throw new Error(`Error deleting related chats: ${chatError.message}`);
+
+    if (deleteChatsError) {
+      console.error('Error deleting related chats:', deleteChatsError);
+      throw new Error(`Error deleting related chats: ${deleteChatsError.message}`);
     }
     console.log('Related chats deleted for document:', documentId);
 

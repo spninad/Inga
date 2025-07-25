@@ -5,11 +5,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { useFonts, Inter_400Regular } from '@expo-google-fonts/inter';
 import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for icons
 import { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
-import DocumentsScreen from './DocumentsScreen.tsx'; // Import the Documents screen
+import DocumentsScreen from './documents.tsx'; // Import the Documents screen
 import ChatsScreen from './chats.tsx'; // Import the Chats screen
 import { useRouter } from 'expo-router';
 
 const Tab = createBottomTabNavigator();
+
+console.log("index screen");
 
 function HomeScreen() {
   const [fontsLoaded] = useFonts({
