@@ -1,4 +1,4 @@
-import { Document } from './documents.service.js';
+import { Document } from './documents.service.ts';
 import { supabase } from './supabaseClient.ts';
 import Constants from 'expo-constants';
 
@@ -19,59 +19,15 @@ export async function startDocumentChat(document?: Document): Promise<ChatSessio
   const systemMessage: Message = {
     role: 'system',
     content: document
-      ? `You are a helpful assistant analyzing document images. Help the user understand from these documents. Maintain a friendly personality, and define any key medical terms in an easy to understand way. Avoid using big words. Respond in the user's language.`
-      : 'You are a helpful assistant. Respond to the user\'s questions concisely and accurately.',
+      ? `You are a helpful assistant analyzing document images. Help the user understand from these documents. Maintain a friendly personality, and define any key medical terms in an easy to understand way. Avoid using big words. The user will tell you their preferred language, and you should continue the conversation in that language.`
+      : 'You are a helpful assistant. The user will tell you their preferred language, and you should continue the conversation in that language.',
   };
 
   const initialMessages: Message[] = [systemMessage];
 
   if (document && document.images.length > 0) {
-    const signedImageUrls = await Promise.all(
-      document.images.map(async (imageUrl) => {
-        if (typeof imageUrl === 'string') {
-          if (imageUrl.startsWith('data:image')) {
-            // Upload Base64 image to Supabase Storage
-            const base64Data = imageUrl.split(',')[1];
-            const filePath = `${document.id}/${Date.now()}.jpg`;
-            const { data, error } = await supabase.storage
-              .from('documents')
-              .upload(filePath, Buffer.from(base64Data, 'base64'), {
-                contentType: 'image/jpeg',
-              });
-
-            if (error) {
-              console.error('Error uploading Base64 image:', error);
-              return null;
-            }
-
-            return supabase.storage.from('documents').getPublicUrl(filePath).data.publicUrl;
-          } else if (imageUrl.includes('/storage/v1/object/public/')) {
-            // Generate signed URL for Supabase Storage image
-            try {
-              const urlObj = new URL(imageUrl);
-              const pathParts = urlObj.pathname.split('/storage/v1/object/public/');
-              if (pathParts.length === 2) {
-                const bucketAndPath = pathParts[1];
-                const [bucket, ...pathSegments] = bucketAndPath.split('/');
-                const filePath = pathSegments.join('/');
-                const { data } = await supabase.storage
-                  .from(bucket)
-                  .createSignedUrl(filePath, 60 * 60);
-                return data?.signedUrl || imageUrl;
-              }
-            } catch (error) {
-              console.error('Error creating signed URL:', error);
-            }
-          }
-          return imageUrl; // Return original URL if not a Supabase URL or Base64
-        } else {
-          console.error('Invalid image format in document:', imageUrl);
-          return null;
-        }
-      })
-    ).then((urls) => urls.filter((url) => url !== null)); // Filter out null values
-
-    const imageMessages = signedImageUrls.map((imageUrl) => ({
+    // Only use base64 data URLs directly
+    const imageMessages = document.images.map((imageUrl: string) => ({
       type: 'image_url',
       image_url: { url: imageUrl },
     }));
@@ -96,17 +52,67 @@ export async function startDocumentChat(document?: Document): Promise<ChatSessio
 }
 
 // Function to send a message to OpenAI API through Supabase function
-export async function sendMessage(chatSession: ChatSession, userMessage: string): Promise<ChatSession> {
+export async function sendMessage(chatSession: ChatSession, userMessage: string, document?: Document): Promise<ChatSession> {
   try {
     // Add user message to the chat
-    const updatedMessages: Message[] = [
-      ...chatSession.messages, 
-      { 
-        role: 'user' as const, 
-        content: userMessage 
+    let updatedMessages: Message[] = [
+      ...chatSession.messages,
+      {
+        role: 'user' as const,
+        content: userMessage
       }
     ];
+
+    // Check if this is the first user message (language preference response)
+    const isFirstUserMessage = chatSession.messages.filter(msg => msg.role === 'user').length === 0;
     
+    // If a document is provided, always prepend a system message about the document
+    if (document) {
+      let systemContent = `You are a helpful assistant analyzing document images. Help the user understand from these documents. Maintain a friendly personality, and define any key medical terms in an easy to understand way. Avoid using big words. Document title: ${document.name || ''}.`;
+      
+      // If this is the first user message, it's likely a language preference
+      if (isFirstUserMessage) {
+        systemContent += ` The user is telling you their preferred language. Acknowledge their language choice and confirm you'll continue the conversation in that language. Then ask them what they'd like to know about their document.`;
+      } else {
+        systemContent += ` Continue the conversation in the language the user has specified.`;
+      }
+      
+      const systemMessage: Message = {
+        role: 'system',
+        content: systemContent,
+      };
+      // Remove any previous system messages to avoid duplicates
+      updatedMessages = updatedMessages.filter((msg: any) => msg.role !== 'system');
+      updatedMessages = [systemMessage, ...updatedMessages];
+      // If the document has images, add them as image_url messages (as in startDocumentChat)
+      if (document.images && document.images.length > 0) {
+        const imageMessages = document.images.map((imageUrl: string) => ({
+          type: 'image_url',
+          image_url: { url: imageUrl },
+        }));
+        // Add the image messages to the first user message if not already present
+        const firstUserMsg = updatedMessages.find((msg: any) => msg.role === 'user');
+        if (firstUserMsg) {
+          firstUserMsg.content = [
+            { type: 'text', text: typeof firstUserMsg.content === 'string' ? firstUserMsg.content : `I'd like to discuss this document titled "${document.name}".` },
+            ...imageMessages,
+          ];
+        }
+      }
+    }
+    
+    console.log("updatedMessages: ", updatedMessages);
+    // Debug: log the messages payload and all image_url.url fields
+    console.log('Payload to OpenAI:', JSON.stringify(updatedMessages, null, 2));
+    updatedMessages.forEach((msg, idx) => {
+      if (Array.isArray(msg.content)) {
+        msg.content.forEach((item, cidx) => {
+          if (item.type === 'image_url') {
+            console.log(`messages[${idx}].content[${cidx}].image_url.url:`, item.image_url.url, 'type:', typeof item.image_url.url);
+          }
+        });
+      }
+    });
     // Check if any message contains images to determine which function to use
     const hasImages = updatedMessages.some(msg => 
       Array.isArray(msg.content) && 
@@ -118,16 +124,15 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string)
     
     // Get the current session auth token
     const { data: { session } } = await supabase.auth.getSession();
-    
     if (!session?.access_token) {
       throw new Error('User is not authenticated. Please sign in to continue.');
     }
-    
+
     // Call OpenAI API through Supabase function with authentication
     const { data, error } = await supabase.functions.invoke(functionName, {
       body: {
         messages: updatedMessages,
-        model: 'gpt-4o', // Vision model that can understand images
+        model: 'gpt-4o',
         max_tokens: 500,
         temperature: 0.7,
       },
@@ -135,21 +140,24 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string)
         Authorization: `Bearer ${session.access_token}`
       }
     });
-    
+
     if (error) {
-      console.error(`Complete error message: ${JSON.stringify(error)}`)
+      console.error(`Supabase function error: ${JSON.stringify(error)}`);
       throw new Error(`Error calling Supabase function: ${error.message}`);
     }
-    
+
     // Get the assistant's response
-    const assistantMessage = data.choices[0].message;
-    
+    const assistantMessage = data.choices?.[0]?.message;
+    if (!assistantMessage) {
+      throw new Error('No response from OpenAI API.');
+    }
+
     // Add the assistant's response to the messages
     updatedMessages.push({
       role: 'assistant',
       content: assistantMessage.content || ''
     });
-    
+
     // Return the updated chat session
     return {
       ...chatSession,
@@ -157,13 +165,11 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string)
     };
   } catch (error) {
     console.error('Error sending message:', error);
-    
     // Add an error message to the chat
     const errorMessage: Message = {
       role: 'assistant',
       content: 'I apologize, but I encountered an error processing your request. Please try again.'
     };
-    
     return {
       ...chatSession,
       messages: [...chatSession.messages, { role: 'user', content: userMessage }, errorMessage]

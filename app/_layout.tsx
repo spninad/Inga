@@ -39,6 +39,7 @@ export default function RootLayout() {
           <Stack.Screen name="chat/[id]" options={{ headerLargeTitle: false }} />
           <Stack.Screen name="add-document" options={{ title: "Add Document", headerLargeTitle: false }} />
           <Stack.Screen name="voice-chat" options={{ headerShown: false }} />
+          <Stack.Screen name="documents" options={{ title: "Documents" }} />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

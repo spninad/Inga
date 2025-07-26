@@ -85,7 +85,7 @@ export default function AddDocumentScreen({ onDocumentAdded }: { onDocumentAdded
 
       // Launch the image picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsMultipleSelection: true,
         quality: 1, // Use maximum quality
         allowsEditing: false,
@@ -138,7 +138,7 @@ export default function AddDocumentScreen({ onDocumentAdded }: { onDocumentAdded
 
         // Launch the camera
         const result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          mediaTypes: 'images',
           allowsEditing: true,
           quality: 0.7,
           base64: true, // Ensure Base64 is included
@@ -229,7 +229,7 @@ export default function AddDocumentScreen({ onDocumentAdded }: { onDocumentAdded
       Alert.alert('Success', 'Document created successfully', [
         {
           text: 'OK',
-          onPress: () => router.back(), // Navigate back to the previous screen
+          onPress: () => router.back()
         },
       ]);
     } catch (error) {

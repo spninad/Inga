@@ -4,9 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { getDocuments, Document, deleteDocument } from '../lib/documents.service';
-import { startDocumentChat } from '../lib/chat.service';
-import { supabase } from '../lib/supabaseClient';
+import { getDocuments, Document, deleteDocument } from '../lib/documents.service.ts';
+import { startDocumentChat } from '../lib/chat.service.ts';
+import { supabase } from '../lib/supabaseClient.ts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RealtimePostgresInsertPayload } from '@supabase/supabase-js'; // Import the type from Supabase
 import { Stack } from 'expo-router';
@@ -18,32 +18,32 @@ export default function DocumentsScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    getUserAndLoadDocuments();
+  console.log("documents screen");
 
-    // Subscribe to Supabase Realtime for the `documents` table
-    const subscription = supabase
-      .channel('documents-changes')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'documents' },
-        (payload: RealtimePostgresInsertPayload<Document>) => { // Define the type for payload
-          console.log('New document added:', payload.new);
-          setDocuments((prevDocuments) => [payload.new, ...prevDocuments]); // Add the new document to the top of the list
-        }
-      )
-      .subscribe();
-
-    // Cleanup the subscription when the component unmounts
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, []);
+  // Remove useEffect that calls getUserAndLoadDocuments to avoid double fetch
   // Replace useEffect with useFocusEffect to refresh on navigation
   useFocusEffect(
     useCallback(() => {
       // Get user and load documents each time the screen comes into focus
       getUserAndLoadDocuments();
+
+      // Subscribe to Supabase Realtime for the `documents` table
+      const subscription = supabase
+        .channel('documents-changes')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'documents' },
+          (payload: RealtimePostgresInsertPayload<Document>) => {
+            console.log('New document added:', payload.new);
+            setDocuments((prevDocuments) => [payload.new, ...prevDocuments]);
+          }
+        )
+        .subscribe();
+
+      // Cleanup the subscription when the screen loses focus
+      return () => {
+        supabase.removeChannel(subscription);
+      };
     }, [])
   );
 
@@ -86,10 +86,7 @@ export default function DocumentsScreen() {
       return;
     }
 
-    router.push({
-      pathname: '/add-document',
-      params: { onDocumentAdded: handleDocumentAdded }, // Pass the callback function
-    });
+    router.push('/add-document');
   };
 
   const handleChatWithDocument = async (document: Document) => {
@@ -99,7 +96,9 @@ export default function DocumentsScreen() {
     }
     
     try {
+      console.log("Starting chat with document:", document);
       const chatSession = await startDocumentChat(document);
+      console.log("chatSession: ", chatSession);
       
       try {
         await AsyncStorage.setItem(`chat_${chatSession.id}`, JSON.stringify(chatSession));
@@ -141,7 +140,7 @@ export default function DocumentsScreen() {
               setIsLoading(true);
               const success = await deleteDocument(document.id, userId);
               if (success) {
-                setDocuments(documents.filter(doc => doc.id !== document.id));
+                setDocuments((prevDocs) => prevDocs.filter(doc => doc.id !== document.id));
                 Alert.alert('Success', 'Document deleted successfully');
               } else {
                 throw new Error('Failed to delete document');
