@@ -1,3 +1,4 @@
+import { request } from 'http'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import OpenAI from 'https://esm.sh/openai@4.11.0'
@@ -50,10 +51,17 @@ serve(async (req: Request) => {
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY })
 
     // Parse request body
-    const { messages, model = 'gpt-4o', max_tokens = 500, temperature = 0.7 } = await req.json()
+    const { messages, model: requestModel, max_tokens = 500, temperature = 0.7 } = await req.json()
 
     if (!messages || !Array.isArray(messages)) {
       throw new Error('Invalid request: messages array is required')
+    }
+
+    // Set model from request, environment variable, or default
+    const model = Deno.env.get("OAI_PROXY_MODEL") || 'gpt-4o';
+
+    if(model != requestModel){
+      console.log("Request model differs from selected model. The selected model in the request will be ignored.")
     }
 
     // Call OpenAI API

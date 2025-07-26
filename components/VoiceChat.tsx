@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Animated, TouchableOpacity, ActivityIndicator, 
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
+import { AI_MODEL } from '../lib/constants.ts';
 import * as FileSystem from 'expo-file-system';
 import { Buffer } from 'buffer';
 import { useAuth } from '../hooks/useAuth';
@@ -133,7 +134,7 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({
   };
 
   const connectWebSocket = (token: string) => {
-    const model = "gpt-4o-realtime-preview-2024-12-17";
+    const model = AI_MODEL;
     const socket = new WebSocket(
       `wss://api.openai.com/v1/realtime?model=${model}`,
       [

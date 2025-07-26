@@ -54,7 +54,10 @@ serve(async (req: Request) => {
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY })
 
     // Parse request body
-    const { messages, model = 'gpt-4o', max_tokens = 500, temperature = 0.7 } = await req.json()
+    const { messages, model: requestModel, max_tokens = 500, temperature = 0.7 } = await req.json()
+
+    // Set model from request, environment variable, or default
+    const model = requestModel || Deno.env.get("OAI_VISION_MODEL") || 'gpt-4o';
 
     if (!messages || !Array.isArray(messages)) {
       throw new Error('Invalid request: messages array is required')
@@ -84,7 +87,14 @@ serve(async (req: Request) => {
                 const [bucket, ...pathSegments] = bucketAndPath.split('/')
                 const filePath = pathSegments.join('/')
                 
-                // TODO: this could be a security vulnerability, as it doesn't check whether the user owns the document.
+                // TODO: verify implementation
+                // Security check: Ensure the user owns the document by checking if their user ID is in the file path.
+                if (!filePath.includes(userId)) {
+                  console.warn(`User ${userId} attempted to access a file they do not own: ${filePath}`);
+                  // Optionally, you could return an error here or just skip signing.
+                  continue; // Skip signing this URL
+                }
+
                 // Create a signed URL with service role client
                 const { data: signedUrl } = await serviceClient
                   .storage
@@ -105,7 +115,7 @@ serve(async (req: Request) => {
 
     // Call OpenAI API with processed messages containing signed URLs
     const completion = await openai.chat.completions.create({
-      model,
+      model: model,
       messages: processedMessages,
       max_tokens,
       temperature,

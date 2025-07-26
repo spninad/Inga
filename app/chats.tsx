@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabaseClient.ts';
 interface Chat {
   id: string;
   title: string;
-  updated_at: string;
+  created_at: string;
   document_id?: string;
   user_id: string;
 }
@@ -56,7 +56,7 @@ export default function ChatsScreen() {
         .from('chats')
         .select('*')
         .eq('user_id', uid)
-        .order('updated_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         throw error;
@@ -159,7 +159,7 @@ export default function ChatsScreen() {
                 <View style={styles.chatInfo}>
                   <Text style={styles.chatTitle}>{item.title}</Text>
                   <Text style={styles.chatTimestamp}>
-                    {new Date(item.updated_at).toLocaleDateString()}
+                    {new Date(item.created_at).toLocaleDateString()}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#ccc" />
