@@ -19,8 +19,8 @@ export async function startDocumentChat(document?: Document): Promise<ChatSessio
   const systemMessage: Message = {
     role: 'system',
     content: document
-      ? `You are a helpful assistant analyzing document images. Help the user understand from these documents. Maintain a friendly personality, and define any key medical terms in an easy to understand way. Avoid using big words. Respond in the user's language.`
-      : 'You are a helpful assistant. Respond to the user\'s questions concisely and accurately.',
+      ? `You are a helpful assistant analyzing document images. Help the user understand from these documents. Maintain a friendly personality, and define any key medical terms in an easy to understand way. Avoid using big words. The user will tell you their preferred language, and you should continue the conversation in that language.`
+      : 'You are a helpful assistant. The user will tell you their preferred language, and you should continue the conversation in that language.',
   };
 
   const initialMessages: Message[] = [systemMessage];
@@ -62,11 +62,24 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string,
         content: userMessage
       }
     ];
+
+    // Check if this is the first user message (language preference response)
+    const isFirstUserMessage = chatSession.messages.filter(msg => msg.role === 'user').length === 0;
+    
     // If a document is provided, always prepend a system message about the document
     if (document) {
+      let systemContent = `You are a helpful assistant analyzing document images. Help the user understand from these documents. Maintain a friendly personality, and define any key medical terms in an easy to understand way. Avoid using big words. Document title: ${document.name || ''}.`;
+      
+      // If this is the first user message, it's likely a language preference
+      if (isFirstUserMessage) {
+        systemContent += ` The user is telling you their preferred language. Acknowledge their language choice and confirm you'll continue the conversation in that language. Then ask them what they'd like to know about their document.`;
+      } else {
+        systemContent += ` Continue the conversation in the language the user has specified.`;
+      }
+      
       const systemMessage: Message = {
         role: 'system',
-        content: `You are a helpful assistant analyzing document images. Help the user understand from these documents. Maintain a friendly personality, and define any key medical terms in an easy to understand way. Avoid using big words. Respond in the user's language. Document title: ${document.name || ''}.`,
+        content: systemContent,
       };
       // Remove any previous system messages to avoid duplicates
       updatedMessages = updatedMessages.filter((msg: any) => msg.role !== 'system');
