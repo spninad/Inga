@@ -19,32 +19,32 @@ export default function DocumentsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
 
-  useEffect(() => {
-    getUserAndLoadDocuments();
+  console.log("documents screen");
 
-    // Subscribe to Supabase Realtime for the `documents` table
-    const subscription = supabase
-      .channel('documents-changes')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'documents' },
-        (payload: RealtimePostgresInsertPayload<Document>) => { // Define the type for payload
-          console.log('New document added:', payload.new);
-          setDocuments((prevDocuments) => [payload.new, ...prevDocuments]); // Add the new document to the top of the list
-        }
-      )
-      .subscribe();
-
-    // Cleanup the subscription when the component unmounts
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, []);
+  // Remove useEffect that calls getUserAndLoadDocuments to avoid double fetch
   // Replace useEffect with useFocusEffect to refresh on navigation
   useFocusEffect(
     useCallback(() => {
       // Get user and load documents each time the screen comes into focus
       getUserAndLoadDocuments();
+
+      // Subscribe to Supabase Realtime for the `documents` table
+      const subscription = supabase
+        .channel('documents-changes')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'documents' },
+          (payload: RealtimePostgresInsertPayload<Document>) => {
+            console.log('New document added:', payload.new);
+            setDocuments((prevDocuments) => [payload.new, ...prevDocuments]);
+          }
+        )
+        .subscribe();
+
+      // Cleanup the subscription when the screen loses focus
+      return () => {
+        supabase.removeChannel(subscription);
+      };
     }, [])
   );
 
@@ -107,7 +107,9 @@ export default function DocumentsScreen() {
     }
     
     try {
+      console.log("Starting chat with document:", document);
       const chatSession = await startDocumentChat(document);
+      console.log("chatSession: ", chatSession);
       
       try {
         await (AsyncStorage as any).setItem(`chat_${chatSession.id}`, JSON.stringify(chatSession));
@@ -149,7 +151,7 @@ export default function DocumentsScreen() {
               setIsLoading(true);
               const success = await deleteDocument(document.id, userId);
               if (success) {
-                setDocuments(documents.filter(doc => doc.id !== document.id));
+                setDocuments((prevDocs) => prevDocs.filter(doc => doc.id !== document.id));
                 Alert.alert('Success', 'Document deleted successfully');
               } else {
                 throw new Error('Failed to delete document');

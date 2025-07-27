@@ -46,7 +46,7 @@ export default function RootLayout() {
             }}
           />
           <Tabs.Screen 
-            name="DocumentsScreen" 
+            name="documents" 
             options={{ 
               title: 'Documents',
               tabBarIcon: ({ color, size }: { color: string; size: number }) => <Ionicons name="folder-outline" size={size} color={color} />,

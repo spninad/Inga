@@ -22,7 +22,6 @@ export default function DocumentDetailScreen() {
   const [document, setDocument] = useState<Document | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [signedImageUrls, setSignedImageUrls] = useState<string[]>([]);
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
 
@@ -36,9 +35,6 @@ export default function DocumentDetailScreen() {
       const doc = await getDocumentById(params.id);
       if (doc) {
         setDocument(doc);
-        if (doc.images && doc.images.length > 0) {
-          await generateSignedUrls(doc.images);
-        }
       } else {
         Alert.alert('Error', 'Document not found');
         router.back();
@@ -51,52 +47,11 @@ export default function DocumentDetailScreen() {
     }
   };
 
-  const generateSignedUrls = async (images: string[]) => {
-    try {
-      const signedUrls = await Promise.all(
-        images.map(async (imageUrl) => {
-
-          // Check if this is a Supabase storage URL using `indexOf`
-          if (imageUrl && imageUrl.indexOf('/storage/v1/object/public/') !== -1) {
-            try {
-              const urlObj = new URL(imageUrl);
-              const pathParts = urlObj.pathname.split('/storage/v1/object/public/');
-              if (pathParts.length === 2) {
-                const bucketAndPath = pathParts[1];
-                const [bucket, ...pathSegments] = bucketAndPath.split('/');
-                const filePath = pathSegments.join('/');
-
-                const { data, error } = await supabase.storage
-                  .from(bucket)
-                  .createSignedUrl(filePath, 60 * 60);
-
-                if (error) {
-                  console.error('Error creating signed URL:', error);
-                  return imageUrl; // Fallback to the original URL
-                }
-
-                return data?.signedUrl || imageUrl;
-              }
-            } catch (error) {
-              console.error('Error creating signed URL:', error);
-            }
-          }
-
-          return imageUrl; // Return the original URL if not a Supabase URL or if signing failed
-        })
-      );
-
-      setSignedImageUrls(signedUrls);
-    } catch (error) {
-      console.error('Error generating signed URLs:', error);
-      setSignedImageUrls(images);
-    }
-  };
-
   const handleChatWithDocument = async () => {
     if (!document) return;
     
     try {
+      console.log("Starting chat with document:", document);
       const chatSession = await startDocumentChat(document);
       router.push({
         pathname: '/chat/[id]',
@@ -150,12 +105,11 @@ export default function DocumentDetailScreen() {
           <>
             <View style={styles.mainImageContainer}>
               <Image 
-                source={{ uri: signedImageUrls[selectedImageIndex] || document.images[selectedImageIndex] }} 
+                source={{ uri: document.images[selectedImageIndex] }} 
                 style={styles.mainImage}
                 resizeMode="contain"
               />
             </View>
-            
             {document.images.length > 1 && (
               <FlatList
                 data={document.images}
@@ -169,7 +123,7 @@ export default function DocumentDetailScreen() {
                     onPress={() => setSelectedImageIndex(index)}
                   >
                     <Image 
-                      source={{ uri: signedImageUrls[index] || item }} 
+                      source={{ uri: item }} 
                       style={styles.thumbnail} 
                     />
                   </TouchableOpacity>
@@ -179,7 +133,6 @@ export default function DocumentDetailScreen() {
                 contentContainerStyle={styles.thumbnailList}
               />
             )}
-            
             <View style={styles.infoContainer}>
               <Text style={styles.imageCounter}>
                 Image {selectedImageIndex + 1} of {document.images.length}
