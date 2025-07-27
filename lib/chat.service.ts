@@ -1,3 +1,4 @@
+import { Document } from './documents.service.ts';
 import { supabase } from './supabaseClient.ts';
 
 export interface Message {
