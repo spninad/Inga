@@ -38,6 +38,8 @@ export default function RootLayout() {
           <Stack.Screen name="document/[id]" options={{ headerLargeTitle: false }} />
           <Stack.Screen name="chat/[id]" options={{ headerLargeTitle: false }} />
           <Stack.Screen name="add-document" options={{ title: "Add Document", headerLargeTitle: false }} />
+          <Stack.Screen name="select-form" options={{ title: "Select Form", headerLargeTitle: false }} />
+          <Stack.Screen name="fill-form" options={{ title: "Fill Form", headerLargeTitle: false }} />
           <Stack.Screen name="voice-chat" options={{ headerShown: false }} />
           <Stack.Screen name="documents" options={{ title: "Documents" }} />
         </Stack>

@@ -121,6 +121,18 @@ export default function DocumentsScreen() {
     }
   };
 
+  const handleFillFormWithDocument = (document: Document) => {
+    if (!userId) {
+      Alert.alert('Authentication Required', 'Please sign in to fill forms');
+      return;
+    }
+    
+    router.push({
+      pathname: '/select-form',
+      params: { documentId: document.id }
+    });
+  };
+
   const handleDeleteDocument = async (document: Document) => {
     if (!userId) {
       Alert.alert('Authentication Required', 'Please sign in to delete documents');
@@ -235,6 +247,13 @@ export default function DocumentsScreen() {
                   onPress={() => handleChatWithDocument(item)}
                 >
                   <Ionicons name="chatbubble" size={22} color="#636ae8" />
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.actionButton}
+                  onPress={() => handleFillFormWithDocument(item)}
+                >
+                  <Ionicons name="document-text" size={22} color="#28a745" />
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
