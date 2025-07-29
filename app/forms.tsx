@@ -12,8 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import { supabase } from '../lib/supabaseClient';
-import { FormSchema, FilledForm, getForms, getFilledForms } from '../lib/forms.service';
+import { supabase } from '../lib/supabaseClient.ts';
+import { FormSchema, FilledForm, getForms, getFilledForms } from '../lib/forms.service.ts';
 
 export default function FormsScreen() {
   const [forms, setForms] = useState<FormSchema[]>([]);

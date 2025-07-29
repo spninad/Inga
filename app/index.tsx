@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for icons
 import { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import DocumentsScreen from './documents.tsx'; // Import the Documents screen
 import FormsScreen from './forms.tsx'; // Import the Forms screen
+import ChatsScreen from './chats.tsx'; // Import the Chats screen
 import { useRouter } from 'expo-router';
 
 const Tab = createBottomTabNavigator();

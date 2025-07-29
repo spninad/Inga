@@ -10,9 +10,8 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../lib/supabaseClient';
-import { FormSchema, getForms, createForm } from '../../lib/forms.service';
-import { commonFormTemplates } from '../../lib/forms.service';
+import { supabase } from '../../lib/supabaseClient.ts';
+import { FormSchema, getForms, createForm, commonFormTemplates } from '../../lib/forms.service.ts';
 
 export default function SelectFormScreen() {
   const router = useRouter();

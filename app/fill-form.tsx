@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { supabase } from '../../lib/supabaseClient';
-import { Document, getDocumentById } from '../../lib/documents.service';
-import { FormSchema, getForms } from '../../lib/forms.service';
-import { extractFormDataFromDocument } from '../../lib/forms-documents.service';
-import { saveFilledForm } from '../../lib/forms.service';
-import FormFiller from '../../components/FormFiller';
+import { supabase } from '../../lib/supabaseClient.ts';
+import { Document, getDocumentById } from '../../lib/documents.service.ts';
+import { FormSchema, getForms, saveFilledForm } from '../../lib/forms.service.ts';
+import { extractFormDataFromDocument, saveFormAsDocument } from '../../lib/forms-documents.service.ts';
+import FormFiller from '../../components/FormFiller.tsx';
 
 export default function FillFormScreen() {
   const router = useRouter();
@@ -102,6 +101,46 @@ export default function FillFormScreen() {
     }
   };
 
+  const handleSaveAsDocument = async (data: Record<string, any>) => {
+    if (!formSchema || !userId) return;
+
+    try {
+      // First save as filled form
+      const filledForm = await saveFilledForm(
+        formSchema.id,
+        formSchema.name,
+        data,
+        false, // Not completed yet, just saving as document
+        userId
+      );
+
+      if (filledForm) {
+        // Then save as document
+        const document = await saveFormAsDocument(filledForm, formSchema, userId);
+        
+        if (document) {
+          Alert.alert(
+            'Success',
+            'Form saved as document successfully!',
+            [
+              {
+                text: 'OK',
+                onPress: () => router.back()
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Error', 'Failed to save form as document');
+        }
+      } else {
+        Alert.alert('Error', 'Failed to save form data');
+      }
+    } catch (error) {
+      console.error('Error saving form as document:', error);
+      Alert.alert('Error', 'Failed to save form as document');
+    }
+  };
+
   const handleCancel = () => {
     Alert.alert(
       'Cancel Form',
@@ -141,6 +180,7 @@ export default function FillFormScreen() {
         formSchema={formSchema}
         initialData={initialData}
         onSave={handleSave}
+        onSaveAsDocument={handleSaveAsDocument}
         onCancel={handleCancel}
       />
     </>

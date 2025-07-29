@@ -19,10 +19,11 @@ interface FormFillerProps {
   formSchema: FormSchema;
   initialData?: Record<string, any>;
   onSave: (data: Record<string, any>, completed: boolean) => void;
+  onSaveAsDocument?: (data: Record<string, any>) => void;
   onCancel?: () => void;
 }
 
-export default function FormFiller({ formSchema, initialData = {}, onSave, onCancel }: FormFillerProps) {
+export default function FormFiller({ formSchema, initialData = {}, onSave, onSaveAsDocument, onCancel }: FormFillerProps) {
   const [formData, setFormData] = useState<Record<string, any>>(initialData);
   const [completed, setCompleted] = useState(false);
 
@@ -250,6 +251,16 @@ export default function FormFiller({ formSchema, initialData = {}, onSave, onCan
           </TouchableOpacity>
         </View>
 
+        {onSaveAsDocument && (
+          <TouchableOpacity
+            style={[styles.button, styles.documentButton]}
+            onPress={() => onSaveAsDocument(formData)}
+          >
+            <Ionicons name="document" size={20} color="white" />
+            <Text style={styles.buttonText}>Save as Document</Text>
+          </TouchableOpacity>
+        )}
+
         {onCancel && (
           <TouchableOpacity
             style={[styles.button, styles.cancelButton]}
@@ -389,6 +400,11 @@ const styles = StyleSheet.create({
   },
   completeButton: {
     backgroundColor: '#28a745',
+  },
+  documentButton: {
+    backgroundColor: '#17a2b8',
+    marginHorizontal: 20,
+    marginBottom: 10,
   },
   cancelButton: {
     backgroundColor: 'transparent',

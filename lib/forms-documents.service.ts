@@ -1,6 +1,6 @@
-import { FormSchema, FilledForm } from '../types/form';
-import { Document, createDocument } from './documents.service';
-import { createForm } from './forms.service';
+import { FormSchema, FilledForm } from '../types/form.ts';
+import { Document, createDocument } from './documents.service.ts';
+import { createForm } from './forms.service.ts';
 
 /**
  * Convert a filled form to a document for storage

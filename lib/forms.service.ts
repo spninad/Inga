@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
-import { FormSchema, FilledForm, FormTemplate } from '../types/form';
+import { FormSchema, FilledForm, FormTemplate } from '../types/form.ts';
 
 // Local storage keys
 const FORMS_STORAGE_KEY = 'forms';
