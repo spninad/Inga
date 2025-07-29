@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { supabase } from '../../lib/supabaseClient.ts';
-import { Document, getDocumentById } from '../../lib/documents.service.ts';
-import { FormSchema, getForms, saveFilledForm } from '../../lib/forms.service.ts';
-import { extractFormDataFromDocument, saveFormAsDocument } from '../../lib/forms-documents.service.ts';
-import FormFiller from '../../components/FormFiller.tsx';
+import { supabase } from '@/lib/supabaseClient.ts';
+import { Document, getDocumentById } from '@/lib/documents.service.ts';
+import { FormSchema, getForms, saveFilledForm } from '@/lib/forms.service.ts';
+import { extractFormDataFromDocument, saveFormAsDocument } from '@/lib/forms-documents.service.ts';
+import FormFiller from '@/components/FormFiller.tsx';
 
 export default function FillFormScreen() {
   const router = useRouter();
