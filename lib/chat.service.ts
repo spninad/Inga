@@ -69,6 +69,7 @@ export async function startDocumentChat(document?: Document): Promise<ChatSessio
 
   if (document && document.images.length > 0) {
     // Only use base64 data URLs directly
+    // TODO: this should get a signed Supabase Storage URL or encode the image as Base64
     const imageMessages = document.images.map((imageUrl: string) => ({
       type: 'image_url',
       image_url: { url: imageUrl },
@@ -128,6 +129,7 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string,
       updatedMessages = [systemMessage, ...updatedMessages];
       // If the document has images, add them as image_url messages (as in startDocumentChat)
       if (document.images && document.images.length > 0) {
+        // TODO: this should use signed Supabase Storage URLs or encode the images as Base64 strings
         const imageMessages = document.images.map((imageUrl: string) => ({
           type: 'image_url',
           image_url: { url: imageUrl },
