@@ -7,18 +7,31 @@ export interface FormField {
   type: 'text' | 'email' | 'phone' | 'date' | 'number' | 'boolean' | 'select';
 }
 
-export const processForm = async (imageUri: string): Promise<FormField[]> => {
+export const processForm = async (imageInput: string): Promise<FormField[]> => {
   try {
-    // 1. Read the image file and encode it in base64
-    const base64 = await FileSystem.readAsStringAsync(imageUri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+    let imageDataUrl: string;
 
-    // 2. Format it as a data URL
-    const imageDataUrl = `data:image/jpeg;base64,${base64}`;
+    if (imageInput.startsWith('data:image')) {
+      // Already a data URL
+      imageDataUrl = imageInput;
+    } else if (imageInput.startsWith('http')) {
+      // Remote URL - download then convert
+      const localPath = `${FileSystem.cacheDirectory}form_${Date.now()}.jpg`;
+      const { uri } = await FileSystem.downloadAsync(imageInput, localPath);
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      await FileSystem.deleteAsync(uri, { idempotent: true });
+      imageDataUrl = `data:image/jpeg;base64,${base64}`;
+    } else {
+      // Assume local file path
+      const base64 = await FileSystem.readAsStringAsync(imageInput, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      imageDataUrl = `data:image/jpeg;base64,${base64}`;
+    }
 
-    // 3. Call the Supabase Edge Function
-    // TODO: will passing a base64 string as an image URL work properly?
+    // Call the Supabase Edge Function
     const { data, error } = await supabase.functions.invoke('process-form', {
       body: { image: imageDataUrl },
     });

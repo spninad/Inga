@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Button, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
-import { supabase } from '../../../lib/supabase.js';
+import { supabase } from '../../../lib/supabaseClient.ts';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { FormField } from '../services/FormProcessingService.ts';
 import { StorageService } from '../services/StorageService.ts';
 import { parseFormFields } from '../utils/formUtils.ts';
+import { createDocument } from '../../../lib/documents.service.ts';
 
 interface Message {
   id: string;
@@ -16,7 +17,7 @@ interface Message {
 
 export default function VoiceChatScreen() {
   const router = useRouter();
-  const { formFields: formFieldsString } = useLocalSearchParams<{ formFields: string }>();
+  const { imageUri, formFields: formFieldsString, documentId } = useLocalSearchParams<{ imageUri?: string; formFields: string; documentId?: string }>();
 
   const [fields, setFields] = useState<FormField[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -204,15 +205,25 @@ export default function VoiceChatScreen() {
     }
   };
 
-    const handleSaveForm = async () => {
+  const handleSaveForm = async () => {
     try {
       await StorageService.saveForm(formData);
+
+      if (!documentId && imageUri) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const base64 = await FileSystem.readAsStringAsync(imageUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          const dataUrl = `data:image/jpeg;base64,${base64}`;
+          await createDocument(`Form ${new Date().toISOString()}`, [dataUrl], session.user.id);
+        }
+      }
+
       console.log('Form saved successfully!');
-      // Optionally, show an alert to the user
-      router.push('/'); // Navigate home
+      router.push('/');
     } catch (error) {
       console.error('Failed to save form:', error);
-      // Optionally, show an error alert to the user
     }
   };
 

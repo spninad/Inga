@@ -18,7 +18,7 @@ export default function FormPreviewScreen() {
 
       router.push({
         pathname: '/forms/screens/ChoiceScreen',
-        params: { imageUri, formFields: JSON.stringify(formFields) },
+        params: { imageUri, formFields: JSON.stringify({ fields: formFields }) },
       });
 
     } catch (error: unknown) {

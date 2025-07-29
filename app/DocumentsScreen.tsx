@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { getDocuments, Document, deleteDocument } from '../lib/documents.service.ts';
 import { startDocumentChat } from '../lib/chat.service.ts';
 import { supabase } from '../lib/supabaseClient.ts';
+import { processForm } from './forms/services/FormProcessingService.ts';
 import * as AsyncStorage from '@react-native-async-storage/async-storage';
 import { RealtimePostgresInsertPayload } from '@supabase/supabase-js'; // Import the type from Supabase
 
@@ -130,6 +131,59 @@ export default function DocumentsScreen() {
     }
   };
 
+  const handleFillFormWithDocument = async (document: Document) => {
+    if (!userId) {
+      Alert.alert('Authentication Required', 'Please sign in to fill forms');
+      return;
+    }
+
+    if (!document.images || document.images.length === 0) {
+      Alert.alert('Error', 'This document has no images to process');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      let imageUrl = document.images[0];
+
+      if (imageUrl.indexOf('/storage/v1/object/public/') !== -1) {
+        try {
+          const urlObj = new URL(imageUrl);
+          const parts = urlObj.pathname.split('/storage/v1/object/public/');
+          if (parts.length === 2) {
+            const [bucket, ...pathSegments] = parts[1].split('/');
+            const filePath = pathSegments.join('/');
+            const { data, error } = await supabase.storage
+              .from(bucket)
+              .createSignedUrl(filePath, 60);
+            if (!error && data?.signedUrl) {
+              imageUrl = data.signedUrl;
+            }
+          }
+        } catch (err) {
+          console.error('Error creating signed URL:', err);
+        }
+      }
+
+      const fields = await processForm(imageUrl);
+
+      router.push({
+        pathname: '/forms/screens/ChoiceScreen',
+        params: {
+          imageUri: imageUrl,
+          formFields: JSON.stringify({ fields }),
+          documentId: document.id,
+        },
+      });
+    } catch (error) {
+      console.error('Error processing document for form fill:', error);
+      Alert.alert('Error', 'Failed to process document');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleDeleteDocument = async (document: Document) => {
     if (!userId) {
       Alert.alert('Authentication Required', 'Please sign in to delete documents');
@@ -227,14 +281,21 @@ export default function DocumentsScreen() {
               </TouchableOpacity>
               
               <View style={styles.documentActions}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => handleChatWithDocument(item)}
                 >
                   <Ionicons name="chatbubble" size={22} color="#636ae8" />
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => handleFillFormWithDocument(item)}
+                >
+                  <Ionicons name="create-outline" size={22} color="#636ae8" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => handleDeleteDocument(item)}
                 >

@@ -4,10 +4,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { FormField } from '../services/FormProcessingService.ts';
 import { StorageService } from '../services/StorageService.ts';
 import { parseFormFields } from '../utils/formUtils.ts';
+import { createDocument } from '../../../lib/documents.service.ts';
+import { supabase } from '../../../lib/supabaseClient.ts';
+import * as FileSystem from 'expo-file-system';
 
 export default function ManualFormScreen() {
   const router = useRouter();
-  const { formFields: formFieldsString } = useLocalSearchParams<{ formFields: string }>();
+  const { imageUri, formFields: formFieldsString, documentId } = useLocalSearchParams<{ imageUri?: string; formFields: string; documentId?: string }>();
 
   const [formState, setFormState] = useState<Record<string, string>>({});
   const [fields, setFields] = useState<FormField[]>([]);
@@ -30,15 +33,25 @@ export default function ManualFormScreen() {
     }));
   };
 
-    const handleSave = async () => {
+  const handleSave = async () => {
     try {
       await StorageService.saveForm(formState);
+
+      if (!documentId && imageUri) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const base64 = await FileSystem.readAsStringAsync(imageUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          const dataUrl = `data:image/jpeg;base64,${base64}`;
+          await createDocument(`Form ${new Date().toISOString()}`, [dataUrl], session.user.id);
+        }
+      }
+
       console.log('Form data saved successfully!');
-      // Navigate home after saving
       router.push('/');
     } catch (error) {
       console.error('Failed to save form:', error);
-      // Optionally, show an error message to the user
     }
   };
 

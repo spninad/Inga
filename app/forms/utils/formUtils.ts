@@ -1,4 +1,4 @@
-import { FormField } from '../services/FormProcessingService.js';
+import { FormField } from '../services/FormProcessingService.ts';
 
 export function parseFormFields(formFieldsString: string | undefined | string[]): FormField[] {
   if (!formFieldsString || typeof formFieldsString !== 'string') {

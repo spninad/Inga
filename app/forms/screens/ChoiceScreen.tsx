@@ -4,19 +4,19 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function ChoiceScreen() {
   const router = useRouter();
-  const { imageUri, formFields } = useLocalSearchParams<{ imageUri: string, formFields: string }>();
+  const { imageUri, formFields, documentId } = useLocalSearchParams<{ imageUri: string, formFields: string, documentId?: string }>();
 
   const handleManualFill = () => {
     router.push({
       pathname: '/forms/screens/ManualFormScreen',
-      params: { imageUri, formFields },
+      params: { imageUri, formFields, documentId },
     });
   };
 
   const handleVoiceFill = () => {
     router.push({
       pathname: '/forms/screens/VoiceChatScreen',
-      params: { imageUri, formFields },
+      params: { imageUri, formFields, documentId },
     });
   };
 
