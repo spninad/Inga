@@ -39,9 +39,12 @@ export async function extractFormFromDocument(document: Document): Promise<Extra
     const messages = [
       {
         role: 'system',
-        content: `You are an expert form analyzer. Analyze the provided document images and extract all fillable form fields. 
-        
-        Return a JSON object with this exact structure:
+        content: `You are an expert form analyzer. Analyze the provided document images to determine if they contain fillable form fields.
+
+        First, determine if the document contains a fillable form. If it does NOT contain a form (e.g., it's just text, a receipt, an article, etc.), respond with:
+        {"error": "not_a_form", "message": "This document does not appear to contain a fillable form. Please upload a document with form fields such as application forms, surveys, or registration forms."}
+
+        If the document DOES contain a fillable form, extract all form fields and return a JSON object with this exact structure:
         {
           "name": "Form title or document name",
           "description": "Brief description of the form",
@@ -67,6 +70,14 @@ export async function extractFormFromDocument(document: Document): Promise<Extra
         - checkbox: checkboxes or yes/no fields
         - select: dropdown fields or multiple choice options
         
+        Look for common form elements like:
+        - Input boxes with labels
+        - Checkboxes with text
+        - Dropdown menus or selection lists
+        - Signature fields
+        - Date fields
+        - Text areas for comments
+        
         Respond only with valid JSON, no other text.`
       },
       {
@@ -74,7 +85,7 @@ export async function extractFormFromDocument(document: Document): Promise<Extra
         content: [
           {
             type: 'text',
-            text: 'Please analyze this document and extract all form fields. Return the structured JSON format.'
+            text: 'Please analyze this document and determine if it contains a fillable form. If it does, extract all form fields. If not, indicate that it is not a form. Return the structured JSON format.'
           },
           ...document.images.map(imageUrl => ({
             type: 'image_url',
@@ -110,17 +121,28 @@ export async function extractFormFromDocument(document: Document): Promise<Extra
     let extractedData;
     try {
       const rawContent = completion.choices[0].message.content;
+      console.log('Raw OpenAI response:', rawContent);
+      
       // Clean up any markdown code blocks
       const cleanedContent = rawContent.replace(/```json\n?|\n?```/g, '').trim();
       extractedData = JSON.parse(cleanedContent);
     } catch (parseError) {
       console.error('Failed to parse OpenAI response:', completion.choices[0].message.content);
-      throw new Error('Failed to parse form extraction results');
+      throw new Error('Failed to parse form extraction results. The AI response was not in valid JSON format.');
+    }
+
+    // Check if the LLM detected that this is not a form
+    if (extractedData.error === 'not_a_form') {
+      throw new Error(extractedData.message || 'This document does not appear to contain a fillable form.');
     }
 
     // Validate and structure the extracted data
     if (!extractedData.fields || !Array.isArray(extractedData.fields)) {
-      throw new Error('Invalid form extraction: no fields found');
+      throw new Error('No fillable form fields were detected in this document. Please ensure the document contains a form with input fields, checkboxes, or selection options.');
+    }
+
+    if (extractedData.fields.length === 0) {
+      throw new Error('No fillable form fields were found in this document. Please upload a document that contains form fields to fill out.');
     }
 
     // Create the extracted form object
@@ -172,13 +194,17 @@ export async function saveFilledForm(
       formText += `${field.label}: ${value}\n`;
     });
 
-    // Save as a new document
+    const now = new Date().toISOString();
+
+    // Save as a new document with all required fields
     const { data, error } = await supabase
       .from('documents')
       .insert({
         name: `${extractedForm.name} - Completed`,
         images: [`data:text/plain;charset=utf-8,${encodeURIComponent(formText)}`],
-        user_id: userId
+        user_id: userId,
+        created_at: now,
+        updated_at: now
       });
 
     if (error) {

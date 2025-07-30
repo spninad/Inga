@@ -77,10 +77,36 @@ export default function ExtractFormScreen() {
       });
       setFormData(initialData);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error extracting form:', error);
-      Alert.alert('Error', 'Failed to extract form from document. Please try again.');
-      router.back();
+      
+      // Provide user-friendly error messages
+      let errorMessage = 'Failed to extract form from document. Please try again.';
+      
+      if (error.message) {
+        // Check for specific error types
+        if (error.message.includes('not appear to contain a fillable form') || 
+            error.message.includes('No fillable form fields')) {
+          errorMessage = error.message;
+        } else if (error.message.includes('valid JSON format')) {
+          errorMessage = 'The AI had trouble analyzing this document. Please ensure the image is clear and contains a form, then try again.';
+        } else if (error.message.includes('No response from OpenAI')) {
+          errorMessage = 'Unable to analyze the document at this time. Please try again later.';
+        } else if (error.message.includes('Failed to analyze document')) {
+          errorMessage = 'There was an issue processing your document. Please try again or contact support if the problem persists.';
+        }
+      }
+      
+      Alert.alert(
+        'Form Extraction Failed', 
+        errorMessage,
+        [
+          {
+            text: 'OK',
+            onPress: () => router.back()
+          }
+        ]
+      );
     } finally {
       setIsExtracting(false);
     }
