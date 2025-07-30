@@ -63,12 +63,13 @@ export async function getDocuments(userId: string): Promise<Document[]> {
 }
 
 // Get a single document by ID
-export async function getDocumentById(documentId: string): Promise<Document | null> {
+export async function getDocumentById(documentId: string, userId: string): Promise<Document | null> {
   try {
     const { data, error } = await supabase
       .from('documents')
       .select('*')
       .eq('id', documentId)
+      .eq('user_id', userId)
       .single();
     
     if (error) {

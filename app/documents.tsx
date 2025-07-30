@@ -121,14 +121,19 @@ export default function DocumentsScreen() {
     }
   };
 
-  const handleFillFormWithDocument = (document: Document) => {
+  const handleExtractFormFromDocument = (document: Document) => {
     if (!userId) {
-      Alert.alert('Authentication Required', 'Please sign in to fill forms');
+      Alert.alert('Authentication Required', 'Please sign in to extract forms');
+      return;
+    }
+    
+    if (!document.images || document.images.length === 0) {
+      Alert.alert('No Images', 'This document has no images to analyze for form extraction');
       return;
     }
     
     router.push({
-      pathname: '/select-form',
+      pathname: '/extract-form',
       params: { documentId: document.id }
     });
   };
@@ -251,7 +256,7 @@ export default function DocumentsScreen() {
                 
                 <TouchableOpacity 
                   style={styles.actionButton}
-                  onPress={() => handleFillFormWithDocument(item)}
+                  onPress={() => handleExtractFormFromDocument(item)}
                 >
                   <Ionicons name="document-text" size={22} color="#28a745" />
                 </TouchableOpacity>

@@ -1,0 +1,516 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Switch
+} from 'react-native';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
+import { supabase } from '../lib/supabaseClient.ts';
+import { getDocumentById } from '../lib/documents.service.ts';
+import { 
+  extractFormFromDocument, 
+  ExtractedForm, 
+  ExtractedField, 
+  FilledFormData,
+  saveFilledForm 
+} from '../lib/form-extraction.service.ts';
+
+export default function ExtractFormScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const documentId = params.documentId as string;
+
+  const [isExtracting, setIsExtracting] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [extractedForm, setExtractedForm] = useState<ExtractedForm | null>(null);
+  const [formData, setFormData] = useState<FilledFormData>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    extractForm();
+  }, []);
+
+  const extractForm = async () => {
+    try {
+      setIsExtracting(true);
+      
+      // Get current user
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        Alert.alert('Authentication Required', 'Please sign in to extract forms');
+        router.replace('/auth/login');
+        return;
+      }
+      setUserId(session.user.id);
+
+      // Get the document
+      const document = await getDocumentById(documentId, session.user.id);
+      if (!document) {
+        Alert.alert('Error', 'Document not found');
+        router.back();
+        return;
+      }
+
+      // Extract form using AI
+      const extracted = await extractFormFromDocument(document);
+      if (!extracted) {
+        Alert.alert('Error', 'Failed to extract form from document');
+        router.back();
+        return;
+      }
+
+      setExtractedForm(extracted);
+      
+      // Initialize form data
+      const initialData: FilledFormData = {};
+      extracted.fields.forEach(field => {
+        initialData[field.id] = field.type === 'checkbox' ? false : '';
+      });
+      setFormData(initialData);
+
+    } catch (error) {
+      console.error('Error extracting form:', error);
+      Alert.alert('Error', 'Failed to extract form from document. Please try again.');
+      router.back();
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const updateField = (fieldId: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
+    
+    // Clear error for this field
+    if (errors[fieldId]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldId];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = (): boolean => {
+    if (!extractedForm) return false;
+    
+    const newErrors: Record<string, string> = {};
+    
+    extractedForm.fields.forEach(field => {
+      if (field.required) {
+        const value = formData[field.id];
+        if (!value || (typeof value === 'string' && value.trim() === '')) {
+          newErrors[field.id] = `${field.label} is required`;
+        }
+      }
+      
+      // Validate email format
+      if (field.type === 'email' && formData[field.id]) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData[field.id])) {
+          newErrors[field.id] = 'Please enter a valid email address';
+        }
+      }
+      
+      // Validate phone format (basic validation)
+      if (field.type === 'phone' && formData[field.id]) {
+        const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+        if (!phoneRegex.test(formData[field.id].replace(/[\s\-\(\)]/g, ''))) {
+          newErrors[field.id] = 'Please enter a valid phone number';
+        }
+      }
+    });
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!extractedForm || !userId) return;
+    
+    if (!validateForm()) {
+      Alert.alert('Validation Error', 'Please fix the errors before saving');
+      return;
+    }
+    
+    try {
+      setIsSaving(true);
+      
+      const success = await saveFilledForm(extractedForm, formData, userId);
+      if (success) {
+        Alert.alert(
+          'Success', 
+          'Form saved successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/documents')
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Error', 'Failed to save form. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving form:', error);
+      Alert.alert('Error', 'Failed to save form. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const renderField = (field: ExtractedField) => {
+    const hasError = !!errors[field.id];
+    
+    switch (field.type) {
+      case 'textarea':
+        return (
+          <View key={field.id} style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>
+              {field.label}
+              {field.required && <Text style={styles.required}> *</Text>}
+            </Text>
+            <TextInput
+              style={[styles.textArea, hasError && styles.inputError]}
+              value={formData[field.id] || ''}
+              onChangeText={(value) => updateField(field.id, value)}
+              placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+            {hasError && <Text style={styles.errorText}>{errors[field.id]}</Text>}
+          </View>
+        );
+        
+      case 'checkbox':
+        return (
+          <View key={field.id} style={styles.checkboxContainer}>
+            <Switch
+              value={formData[field.id] || false}
+              onValueChange={(value) => updateField(field.id, value)}
+              trackColor={{ false: '#767577', true: '#636ae8' }}
+              thumbColor={formData[field.id] ? '#ffffff' : '#f4f3f4'}
+            />
+            <Text style={styles.checkboxLabel}>
+              {field.label}
+              {field.required && <Text style={styles.required}> *</Text>}
+            </Text>
+            {hasError && <Text style={styles.errorText}>{errors[field.id]}</Text>}
+          </View>
+        );
+        
+      case 'select':
+        return (
+          <View key={field.id} style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>
+              {field.label}
+              {field.required && <Text style={styles.required}> *</Text>}
+            </Text>
+            <View style={[styles.pickerContainer, hasError && styles.inputError]}>
+              <Picker
+                selectedValue={formData[field.id] || ''}
+                onValueChange={(value) => updateField(field.id, value)}
+                style={styles.picker}
+              >
+                <Picker.Item label={`Select ${field.label.toLowerCase()}`} value="" />
+                {field.options?.map((option, index) => (
+                  <Picker.Item key={index} label={option} value={option} />
+                ))}
+              </Picker>
+            </View>
+            {hasError && <Text style={styles.errorText}>{errors[field.id]}</Text>}
+          </View>
+        );
+        
+      default:
+        return (
+          <View key={field.id} style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>
+              {field.label}
+              {field.required && <Text style={styles.required}> *</Text>}
+            </Text>
+            <TextInput
+              style={[styles.textInput, hasError && styles.inputError]}
+              value={formData[field.id] || ''}
+              onChangeText={(value) => updateField(field.id, value)}
+              placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+              keyboardType={field.type === 'email' ? 'email-address' : 
+                          field.type === 'phone' ? 'phone-pad' : 
+                          field.type === 'number' ? 'numeric' : 'default'}
+              autoCapitalize={field.type === 'email' ? 'none' : 'sentences'}
+            />
+            {hasError && <Text style={styles.errorText}>{errors[field.id]}</Text>}
+          </View>
+        );
+    }
+  };
+
+  const getCompletionPercentage = (): number => {
+    if (!extractedForm) return 0;
+    
+    const totalFields = extractedForm.fields.length;
+    const completedFields = extractedForm.fields.filter(field => {
+      const value = formData[field.id];
+      return value && (typeof value !== 'string' || value.trim() !== '');
+    }).length;
+    
+    return Math.round((completedFields / totalFields) * 100);
+  };
+
+  if (isExtracting) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#636ae8" />
+        <Text style={styles.loadingText}>Analyzing document...</Text>
+        <Text style={styles.loadingSubText}>Extracting form fields using AI</Text>
+      </View>
+    );
+  }
+
+  if (!extractedForm) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle" size={64} color="#ff6b6b" />
+        <Text style={styles.errorText}>Failed to extract form</Text>
+      </View>
+    );
+  }
+
+  const completionPercentage = getCompletionPercentage();
+
+  return (
+    <>
+      <Stack.Screen 
+        options={{
+          title: 'Fill Extracted Form',
+          headerLargeTitle: false,
+        }}
+      />
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.formTitle}>{extractedForm.name}</Text>
+          <Text style={styles.formDescription}>{extractedForm.description}</Text>
+          
+          {/* Progress indicator */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { width: `${completionPercentage}%` }
+                ]} 
+              />
+            </View>
+            <Text style={styles.progressText}>{completionPercentage}% complete</Text>
+          </View>
+        </View>
+
+        {/* Form fields */}
+        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          {extractedForm.fields.map(renderField)}
+          
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark" size={20} color="white" />
+                  <Text style={styles.saveButtonText}>Save Form</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 16,
+  },
+  loadingSubText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+  },
+  header: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e5e9',
+  },
+  formTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 8,
+  },
+  formDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  progressBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#e1e5e9',
+    borderRadius: 3,
+    marginRight: 12,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#636ae8',
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#636ae8',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  fieldContainer: {
+    backgroundColor: 'white',
+    padding: 16,
+    marginTop: 8,
+    marginHorizontal: 16,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  fieldLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  required: {
+    color: '#ff6b6b',
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#e1e5e9',
+    borderRadius: 6,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#ffffff',
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: '#e1e5e9',
+    borderRadius: 6,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#ffffff',
+    minHeight: 80,
+  },
+  inputError: {
+    borderColor: '#ff6b6b',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 16,
+    marginTop: 8,
+    marginHorizontal: 16,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginLeft: 12,
+    flex: 1,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#e1e5e9',
+    borderRadius: 6,
+    backgroundColor: '#ffffff',
+  },
+  picker: {
+    height: 50,
+  },
+  errorText: {
+    color: '#ff6b6b',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  buttonContainer: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  saveButton: {
+    backgroundColor: '#636ae8',
+    borderRadius: 8,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+});
