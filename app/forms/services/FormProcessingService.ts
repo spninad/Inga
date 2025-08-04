@@ -8,10 +8,13 @@ export interface FormField {
 }
 
 export const processForm = async (imageInput: string): Promise<FormField[]> => {
+  if (!imageInput || imageInput.trim() === '') {
+    throw new Error('No image data or path provided');
+  }
   try {
     let imageDataUrl: string;
 
-    if (imageInput.startsWith('data:image')) {
+    if (imageInput.startsWith('data:')) {
       // Already a data URL
       imageDataUrl = imageInput;
     } else if (imageInput.startsWith('http')) {
@@ -23,8 +26,14 @@ export const processForm = async (imageInput: string): Promise<FormField[]> => {
       });
       await FileSystem.deleteAsync(uri, { idempotent: true });
       imageDataUrl = `data:image/jpeg;base64,${base64}`;
+    } else if (imageInput.startsWith('file://')) {
+      // Local file URI provided by expo-image-picker etc.
+      const base64 = await FileSystem.readAsStringAsync(imageInput, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      imageDataUrl = `data:image/jpeg;base64,${base64}`;
     } else {
-      // Assume local file path
+      // Assume local file path on device (e.g. picked with plain path)
       const base64 = await FileSystem.readAsStringAsync(imageInput, {
         encoding: FileSystem.EncodingType.Base64,
       });
@@ -50,3 +59,5 @@ export const processForm = async (imageInput: string): Promise<FormField[]> => {
     throw new Error(`Failed to process form: ${errorMessage}`);
   }
 };
+
+export default processForm
