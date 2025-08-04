@@ -12,8 +12,6 @@ export interface Document {
   images: string[]; // Array of base64 data URLs (data:image/jpeg;base64,...)
 }
 
-/* All these methods should write/delete images to/from Supabase Storage, rather than storing it as a Bas64 string in the DB*/
-
 // Create a new document with an array of JSON images
 export async function createDocument(name: string, imageBase64Array: string[], userId: string): Promise<Document | null> {
   try {
@@ -65,12 +63,13 @@ export async function getDocuments(userId: string): Promise<Document[]> {
 }
 
 // Get a single document by ID
-export async function getDocumentById(documentId: string): Promise<Document | null> {
+export async function getDocumentById(documentId: string, userId: string): Promise<Document | null> {
   try {
     const { data, error } = await supabase
       .from('documents')
       .select('*')
       .eq('id', documentId)
+      .eq('user_id', userId)
       .single();
     
     if (error) {

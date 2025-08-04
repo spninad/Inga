@@ -1,16 +1,15 @@
-import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, ActivityIndicator, SafeAreaView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useNavigation } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { getDocuments, Document, deleteDocument } from '../lib/documents.service.ts';
 import { startDocumentChat } from '../lib/chat.service.ts';
 import { supabase } from '../lib/supabaseClient.ts';
-import { processForm } from './forms/services/FormProcessingService.ts';
-import * as AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RealtimePostgresInsertPayload } from '@supabase/supabase-js'; // Import the type from Supabase
-
+import { Stack } from 'expo-router';
 
 export default function DocumentsScreen() {
   // Add Stack.Screen component for this screen's title
@@ -18,9 +17,8 @@ export default function DocumentsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
-  const navigation = useNavigation();
 
-  // console.debug("documents screen");
+  console.log("documents screen");
 
   // Remove useEffect that calls getUserAndLoadDocuments to avoid double fetch
   // Replace useEffect with useFocusEffect to refresh on navigation
@@ -36,7 +34,7 @@ export default function DocumentsScreen() {
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'documents' },
           (payload: RealtimePostgresInsertPayload<Document>) => {
-            console.debug('New document added');
+            console.log('New document added:', payload.new);
             setDocuments((prevDocuments) => [payload.new, ...prevDocuments]);
           }
         )
@@ -82,24 +80,14 @@ export default function DocumentsScreen() {
     setDocuments((prevDocuments) => [newDocument, ...prevDocuments]); // Add the new document to the top of the list
   };
 
-  const handleAddDocument = useCallback(() => {
+  const handleAddDocument = () => {
     if (!userId) {
       Alert.alert('Authentication Required', 'Please sign in to add documents');
       return;
     }
 
     router.push('/add-document');
-  }, [userId, router]);
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity onPress={handleAddDocument} style={{ marginRight: 15 }}>
-          <Ionicons name="add" size={30} color="#636ae8" />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, handleAddDocument]);
+  };
 
   const handleChatWithDocument = async (document: Document) => {
     if (!userId) {
@@ -108,13 +96,13 @@ export default function DocumentsScreen() {
     }
     
     try {
-      console.debug('Starting chat with document', { id: document.id, name: document.name });
+      console.log("Starting chat with document:", document);
       const chatSession = await startDocumentChat(document);
-      console.debug('Chat session started', { id: chatSession.id });
+      console.log("chatSession: ", chatSession);
       
       try {
-        await (AsyncStorage as any).setItem(`chat_${chatSession.id}`, JSON.stringify(chatSession));
-        console.debug('Saved chat session', chatSession.id);
+        await AsyncStorage.setItem(`chat_${chatSession.id}`, JSON.stringify(chatSession));
+        console.log("Saved chat session to AsyncStorage:", chatSession.id);
       } catch (storageError) {
         console.error("AsyncStorage error:", storageError);
       }
@@ -133,57 +121,21 @@ export default function DocumentsScreen() {
     }
   };
 
-  const handleFillFormWithDocument = async (document: Document) => {
+  const handleExtractFormFromDocument = (document: Document) => {
     if (!userId) {
-      Alert.alert('Authentication Required', 'Please sign in to fill forms');
+      Alert.alert('Authentication Required', 'Please sign in to extract forms');
       return;
     }
-
+    
     if (!document.images || document.images.length === 0) {
-      Alert.alert('Error', 'This document has no images to process');
+      Alert.alert('No Images', 'This document has no images to analyze for form extraction');
       return;
     }
-
-    try {
-      setIsLoading(true);
-
-      let imageUrl = document.images[0];
-
-      if (imageUrl.indexOf('/storage/v1/object/public/') !== -1) {
-        try {
-          const urlObj = new URL(imageUrl);
-          const parts = urlObj.pathname.split('/storage/v1/object/public/');
-          if (parts.length === 2) {
-            const [bucket, ...pathSegments] = parts[1].split('/');
-            const filePath = pathSegments.join('/');
-            const { data, error } = await supabase.storage
-              .from(bucket)
-              .createSignedUrl(filePath, 60);
-            if (!error && data?.signedUrl) {
-              imageUrl = data.signedUrl;
-            }
-          }
-        } catch (err) {
-          console.error('Error creating signed URL:', err);
-        }
-      }
-
-      const fields = await processForm(imageUrl);
-
-      router.push({
-        pathname: '/forms/screens/ChoiceScreen',
-        params: {
-          imageUri: imageUrl,
-          formFields: JSON.stringify({ fields }),
-          documentId: document.id,
-        },
-      });
-    } catch (error) {
-      console.error('Error processing document for form fill:', error);
-      Alert.alert('Error', 'Failed to process document');
-    } finally {
-      setIsLoading(false);
-    }
+    
+    router.push({
+      pathname: '/extract-form',
+      params: { documentId: document.id }
+    });
   };
 
   const handleDeleteDocument = async (document: Document) => {
@@ -243,7 +195,19 @@ export default function DocumentsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <>
+     <Stack.Screen 
+        options={{
+          title: 'Documents',
+          headerLargeTitle: true,
+        }}
+      />
+    <View style={styles.container}>
+
+      <TouchableOpacity style={styles.addButton} onPress={handleAddDocument}>
+        <Ionicons name="add-circle" size={24} color="white" />
+        <Text style={styles.addButtonText}>Add Document</Text>
+      </TouchableOpacity>
 
       {documents.length === 0 ? (
         <View style={styles.emptyState}>
@@ -283,21 +247,21 @@ export default function DocumentsScreen() {
               </TouchableOpacity>
               
               <View style={styles.documentActions}>
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={styles.actionButton}
                   onPress={() => handleChatWithDocument(item)}
                 >
                   <Ionicons name="chatbubble" size={22} color="#636ae8" />
                 </TouchableOpacity>
-
-                <TouchableOpacity
+                
+                <TouchableOpacity 
                   style={styles.actionButton}
-                  onPress={() => handleFillFormWithDocument(item)}
+                  onPress={() => handleExtractFormFromDocument(item)}
                 >
-                  <Ionicons name="create-outline" size={22} color="#636ae8" />
+                  <Ionicons name="document-text" size={22} color="#28a745" />
                 </TouchableOpacity>
-
-                <TouchableOpacity
+                
+                <TouchableOpacity 
                   style={styles.actionButton}
                   onPress={() => handleDeleteDocument(item)}
                 >
@@ -310,7 +274,8 @@ export default function DocumentsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </SafeAreaView>
+    </View>
+    </>
   );
 }
 

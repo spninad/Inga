@@ -1,16 +1,10 @@
 import { Document } from './documents.service.ts';
 import { supabase } from './supabaseClient.ts';
+import Constants from 'expo-constants';
 
 export interface Message {
   role: 'system' | 'user' | 'assistant';
   content: string | Array<{ type: string; [key: string]: any }>;
-}
-
-export interface Chat {
-  id: string;
-  title: string;
-  created_at: string;
-  document_id?: string;
 }
 
 export interface ChatSession {
@@ -20,42 +14,6 @@ export interface ChatSession {
   documentId?: string;
 }
 
-export async function getChats(userId: string): Promise<Chat[]> {
-  const { data, error } = await supabase
-    .from('chats')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching chats:', error);
-    throw error;
-  }
-  return data || [];
-}
-
-export async function createNewChat(userId: string, title: string, documentId?: string): Promise<Chat> {
-  const chatData: { user_id: string; title: string; document_id?: string } = {
-    user_id: userId,
-    title,
-  };
-
-  if (documentId) {
-    chatData.document_id = documentId;
-  }
-
-  const { data, error } = await supabase
-    .from('chats')
-    .insert([chatData])
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error creating chat:', error);
-    throw error;
-  }
-  return data;
-}
 // Function to start a new chat with a document (if provided)
 export async function startDocumentChat(document?: Document): Promise<ChatSession> {
   const systemMessage: Message = {
@@ -69,7 +27,6 @@ export async function startDocumentChat(document?: Document): Promise<ChatSessio
 
   if (document && document.images.length > 0) {
     // Only use base64 data URLs directly
-    // TODO: this should get a signed Supabase Storage URL or encode the image as Base64
     const imageMessages = document.images.map((imageUrl: string) => ({
       type: 'image_url',
       image_url: { url: imageUrl },
@@ -129,7 +86,6 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string,
       updatedMessages = [systemMessage, ...updatedMessages];
       // If the document has images, add them as image_url messages (as in startDocumentChat)
       if (document.images && document.images.length > 0) {
-        // TODO: this should use signed Supabase Storage URLs or encode the images as Base64 strings
         const imageMessages = document.images.map((imageUrl: string) => ({
           type: 'image_url',
           image_url: { url: imageUrl },
