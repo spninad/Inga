@@ -9,12 +9,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  SafeAreaView
+  SafeAreaView,
+  Modal,
+  ScrollView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabaseClient.ts';
 import { getDocumentById } from '../../lib/documents.service.ts';
+import { sendMessage } from '@/lib/chat.service.ts';
+import { Document } from '../../lib/documents.service.ts';
 
 export default function ChatScreen() {
   const [chatSession, setChatSession] = useState<{ id: string; title: string; messages: any[] } | null>(null);
@@ -22,9 +26,36 @@ export default function ChatScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const [loadingDots, setLoadingDots] = useState('');
   const listRef = useRef<FlatList>(null);
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; isNew?: string; documentId?: string }>();
+
+  // Predefined list of languages
+  const languages = [
+    { code: 'en', name: 'English', nativeName: 'English' },
+    { code: 'es', name: 'Spanish', nativeName: 'Español' },
+    { code: 'fr', name: 'French', nativeName: 'Français' },
+    { code: 'de', name: 'German', nativeName: 'Deutsch' },
+    { code: 'it', name: 'Italian', nativeName: 'Italiano' },
+    { code: 'pt', name: 'Portuguese', nativeName: 'Português' },
+    { code: 'ru', name: 'Russian', nativeName: 'Русский' },
+    { code: 'zh', name: 'Chinese', nativeName: '中文' },
+    { code: 'ja', name: 'Japanese', nativeName: '日本語' },
+    { code: 'ko', name: 'Korean', nativeName: '한국어' },
+    { code: 'ar', name: 'Arabic', nativeName: 'العربية' },
+    { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
+    { code: 'tr', name: 'Turkish', nativeName: 'Türkçe' },
+    { code: 'nl', name: 'Dutch', nativeName: 'Nederlands' },
+    { code: 'pl', name: 'Polish', nativeName: 'Polski' },
+    { code: 'sv', name: 'Swedish', nativeName: 'Svenska' },
+    { code: 'da', name: 'Danish', nativeName: 'Dansk' },
+    { code: 'no', name: 'Norwegian', nativeName: 'Norsk' },
+    { code: 'fi', name: 'Finnish', nativeName: 'Suomi' },
+    { code: 'he', name: 'Hebrew', nativeName: 'עברית' },
+  ];
 
   useEffect(() => {
     const fetchUserId = async () => {
@@ -37,6 +68,21 @@ export default function ChatScreen() {
   useEffect(() => {
     if (currentUserId) loadChat();
   }, [currentUserId]);
+
+  // Animate loading dots
+  useEffect(() => {
+    if (isSending) {
+      const interval = setInterval(() => {
+        setLoadingDots(prev => {
+          if (prev === '...') return '';
+          return prev + '.';
+        });
+      }, 500);
+      return () => clearInterval(interval);
+    } else {
+      setLoadingDots('');
+    }
+  }, [isSending]);
 
   // Load chat and messages from Supabase
   const loadChat = async () => {
@@ -94,11 +140,11 @@ export default function ChatScreen() {
           return;
         }
 
-        // Add intro message
+        // Add intro message with language selection
         const introMessage = {
           chat_id: chat.id,
           user_id: currentUserId,
-          content: { type: 'text', text: "👋 I am your AI assistant. Ask me anything about your document!" },
+          content: "👋 I am your AI assistant. Please select your preferred language to continue our conversation about your document.",
           role: 'assistant'
         };
         await supabase.from('messages').insert([introMessage]);
@@ -106,8 +152,11 @@ export default function ChatScreen() {
         setChatSession({
           id: chat.id,
           title: chat.title,
-          messages: [introMessage.content],
+          messages: [{ role: 'assistant', content: introMessage.content }],
         });
+        
+        // Show language selection modal for new chats
+        setShowLanguageModal(true);
       }  
     } catch (error) {
       console.error('Error loading chat:', error);
@@ -116,59 +165,211 @@ export default function ChatScreen() {
     }
   };
 
-  // Save message to Supabase
-  const handleSendMessage = async () => {
-    const message = inputMessage.trim();
-    if (!message || !chatSession || !currentUserId) return;
-    setInputMessage('');
-    setIsSending(true);
+  // Handle language selection
+  const handleLanguageSelect = async (language: { code: string; name: string; nativeName: string }) => {
+    if (!chatSession || !currentUserId) return;
+    
+    setSelectedLanguage(language.name);
+    setShowLanguageModal(false);
+    setIsSending(true); // Start loading animation
+    
+    // Send the language selection as a user message
+    const languageMessage = `I prefer to converse in ${language.name} (${language.nativeName}).`;
+    
     // Create the new message object
-    const newMessage = { type: 'text', text: message, role: 'user' };
+    const newMessage = { content: languageMessage, role: 'user' };
+    
     // Optimistically update UI
     setChatSession(prev => prev ? {
       ...prev,
       messages: [...prev.messages, newMessage],
     } : prev);
+    
+    // Scroll to bottom after adding user message
+    setTimeout(() => scrollToBottom(), 100);
+    
     try {
-      // Save to database
-      const { error } = await supabase.from('messages').insert([
+      // Save user message to database
+      const { data: userMsgData, error: userMsgError } = await supabase.from('messages').insert([
         {
           chat_id: chatSession.id,
           user_id: currentUserId,
-          content: { type: 'text', text: message },
+          content: languageMessage,
           role: 'user',
         }
-      ]);
-      if (error) {
+      ]).select().single();
+      
+      if (userMsgError) {
         // Rollback optimistic update if error
         setChatSession(prev => prev ? {
           ...prev,
           messages: prev.messages.filter((msg, idx, arr) => idx !== arr.length - 1),
         } : prev);
-        console.error('Error sending message:', error);
-        // Optionally, show a user-facing error here
+        console.error('Error sending language message:', userMsgError);
+        return;
       }
-      // DO NOT reload all messages here!
+      
+      // Fetch the document and send it with the language message
+      let document: Document | undefined = undefined;
+      if (params.documentId) {
+        const docResult = await getDocumentById(params.documentId);
+        if (docResult) document = docResult;
+      }
+      
+      // Get assistant response from OpenAI via Supabase
+      const updatedSession = await sendMessage(chatSession, languageMessage, document);
+      
+      // Find the assistant's message (last in updatedSession.messages)
+      const assistantMsg = updatedSession.messages[updatedSession.messages.length - 1];
+      
+      // Update UI with assistant message
+      setChatSession(prev => prev ? {
+        ...prev,
+        messages: [...prev.messages, assistantMsg],
+      } : prev);
+      
+      // Scroll to bottom after adding assistant message
+      setTimeout(() => scrollToBottom(), 100);
+      
+      // Save assistant message to database
+      await supabase.from('messages').insert([
+        {
+          chat_id: chatSession.id,
+          user_id: null,
+          content: assistantMsg.content,
+          role: 'assistant',
+        }
+      ]);
     } catch (error) {
       // Rollback optimistic update if error
       setChatSession(prev => prev ? {
         ...prev,
         messages: prev.messages.filter((msg, idx, arr) => idx !== arr.length - 1),
       } : prev);
-      console.error('Error sending message:', error);
+      console.error('Error sending language message or getting assistant response:', error);
+    } finally {
+      setIsSending(false); // Stop loading animation
+    }
+  };
+
+  // Save message to Supabase
+  const handleSendMessage = async () => {
+    const message = inputMessage.trim();
+    if (!message || !chatSession || !currentUserId) return;
+    
+    // Clear input immediately to prevent double sending
+    setInputMessage('');
+    setIsSending(true);
+    // Create the new message object
+    const newMessage = { content: message, role: 'user' };
+    // Optimistically update UI
+    setChatSession(prev => prev ? {
+      ...prev,
+      messages: [...prev.messages, newMessage],
+    } : prev);
+    
+    // Scroll to bottom after adding user message
+    setTimeout(() => scrollToBottom(), 100);
+    
+    let userMessageId = null;
+    try {
+      // Save user message to database
+      const { data: userMsgData, error: userMsgError } = await supabase.from('messages').insert([
+        {
+          chat_id: chatSession.id,
+          user_id: currentUserId,
+          content: message,
+          role: 'user',
+        }
+      ]).select().single();
+      if (userMsgError) {
+        // Rollback optimistic update if error
+        setChatSession(prev => prev ? {
+          ...prev,
+          messages: prev.messages.filter((msg, idx, arr) => idx !== arr.length - 1),
+        } : prev);
+        console.error('Error sending message:', userMsgError);
+        setIsSending(false);
+        return;
+      }
+      userMessageId = userMsgData?.id;
+      // Fetch the document and send it with every message
+      let document: Document | undefined = undefined;
+      if (params.documentId) {
+        const docResult = await getDocumentById(params.documentId);
+        if (docResult) document = docResult;
+      }
+      // Get assistant response from OpenAI via Supabase, always passing the document (or undefined)
+      const updatedSession = await sendMessage(chatSession, message, document);
+      // Find the assistant's message (last in updatedSession.messages)
+      const assistantMsg = updatedSession.messages[updatedSession.messages.length - 1];
+      // Update UI with assistant message
+      setChatSession(prev => prev ? {
+        ...prev,
+        messages: [...prev.messages, assistantMsg],
+      } : prev);
+      
+      // Scroll to bottom after adding assistant message
+      setTimeout(() => scrollToBottom(), 100);
+      
+      // Save assistant message to database
+      await supabase.from('messages').insert([
+        {
+          chat_id: chatSession.id,
+          user_id: null, // or system/assistant id if you have one
+          content: assistantMsg.content,
+          role: 'assistant',
+        }
+      ]);
+    } catch (error) {
+      // Rollback optimistic update if error
+      setChatSession(prev => prev ? {
+        ...prev,
+        messages: prev.messages.filter((msg, idx, arr) => idx !== arr.length - 1),
+      } : prev);
+      console.error('Error sending message or getting assistant response:', error);
     } finally {
       setIsSending(false);
     }
   };
 
+  // Scroll to bottom function
+  const scrollToBottom = () => {
+    if (listRef.current && chatSession?.messages.length) {
+      setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  };
+
   // Render message item
-  const renderMessageItem = ({ item }: { item: any }) => {
+  const renderMessageItem = ({ item, index }: { item: any; index: number }) => {
     const isUser = item.role === 'user';
     let messageText = '';
-    if (item && item.type === 'text') {
-      messageText = item.text;
+
+    // Handle loading message
+    if (item.id === 'loading') {
+      return (
+        <View style={[styles.messageContainer, styles.aiMessage]}>
+          <Text style={[styles.messageText, styles.aiMessageText]}>
+            <Text style={styles.loadingDots}>{loadingDots}</Text>
+          </Text>
+        </View>
+      );
     }
+
+    if (typeof item.content === 'string') {
+      messageText = item.content;
+    } else if (Array.isArray(item.content)) {
+      // If content is an array (OpenAI format), find the first text part
+      const textPart = item.content.find((c: any) => c.type === 'text');
+      if (textPart) messageText = textPart.text;
+    } else if (item.content && item.content.type === 'text') {
+      messageText = item.content.text;
+    }
+
     if (messageText === '') return null;
+
     return (
       <View style={[styles.messageContainer, isUser ? styles.userMessage : styles.aiMessage]}>
         <Text style={[styles.messageText, isUser ? styles.userMessageText : styles.aiMessageText]}>
@@ -177,6 +378,11 @@ export default function ChatScreen() {
       </View>
     );
   };
+
+  // Create messages array with loading message if sending
+  const messagesWithLoading = isSending 
+    ? [...(chatSession?.messages || []), { role: 'assistant', content: '', id: 'loading' }]
+    : chatSession?.messages || [];
 
   if (isLoading) {
     return (
@@ -208,11 +414,12 @@ export default function ChatScreen() {
             <>
               <FlatList
                 ref={listRef}
-                data={chatSession.messages}
-                keyExtractor={(_, index) => index.toString()}
+                data={messagesWithLoading}
+                keyExtractor={(item, index) => item.id || index.toString()}
                 renderItem={renderMessageItem}
                 contentContainerStyle={styles.chatList}
                 onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
+                onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
               />
               <View style={styles.inputContainer}>
                 <TextInput
@@ -259,6 +466,40 @@ export default function ChatScreen() {
           )}
         </KeyboardAvoidingView>
       </SafeAreaView>
+      
+      {/* Language Selection Modal */}
+      <Modal
+        visible={showLanguageModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowLanguageModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Your Language</Text>
+              <TouchableOpacity
+                onPress={() => setShowLanguageModal(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.languageList}>
+              {languages.map((language) => (
+                <TouchableOpacity
+                  key={language.code}
+                  style={styles.languageItem}
+                  onPress={() => handleLanguageSelect(language)}
+                >
+                  <Text style={styles.languageName}>{language.name}</Text>
+                  <Text style={styles.languageNativeName}>{language.nativeName}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -363,5 +604,60 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '500',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
+    padding: 0,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eaeaea',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  languageList: {
+    maxHeight: 400,
+  },
+  languageItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  languageName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  languageNativeName: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  loadingDots: {
+    color: '#636ae8',
+    fontWeight: 'bold',
   },
 });
