@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import { startDocumentChat } from '../lib/chat.service.ts';
 import { supabase } from '../lib/supabaseClient.ts';
+import { useFocusEffect } from '@react-navigation/native';
 
 // Interface for Chat type
 interface Chat {
   id: string;
   title: string;
   created_at: string;
-  document_id?: string;
+  documentId?: string;
   user_id: string;
 }
 
@@ -20,10 +21,46 @@ export default function ChatsScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    // Get the current user and fetch chats
-    getUserAndFetchChats();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      getUserAndFetchChats();
+
+      const subscription = supabase
+        .channel('chats-changes')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'chats' },
+          (payload) => {
+            const newChat = payload.new as Chat;
+            setChats((prev) => [newChat, ...prev]);
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'chats' },
+          (payload) => {
+            const updatedChat = payload.new as Chat;
+            setChats((prev) =>
+              prev.map((chat) => (chat.id === updatedChat.id ? updatedChat : chat))
+            );
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'chats' },
+          (payload) => {
+            const deletedChat = payload.old as Chat;
+            setChats((prev) => prev.filter((chat) => chat.id !== deletedChat.id));
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    }, [])
+  );
+
 
   const getUserAndFetchChats = async () => {
     try {
@@ -83,14 +120,14 @@ export default function ChatsScreen() {
     // Navigate to the chat screen
     router.push({
       pathname: '/chat/[id]',
-      params: { id: newChat.id, isNew: 'true' }
+      params: { id: newChat.id, isNew: 'true', documentId: newChat.documentId }
     });
   };
 
-  const handleChatPress = (chatId: string) => {
+  const handleChatPress = (chatId: string, documentId: string) => {
     router.push({
       pathname: '/chat/[id]',
-      params: { id: chatId }
+      params: { id: chatId , documentId: documentId}
     });
   };
 
@@ -147,11 +184,13 @@ export default function ChatsScreen() {
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.chatItem}
-                onPress={() => handleChatPress(item.id)}
+                onPress={() => {
+                  console.log("Pressed chat:", item.id);
+                  handleChatPress(item.id, item.documentId || "");}}
               >
                 <View style={styles.chatIcon}>
                   <Ionicons 
-                    name={item.document_id ? "document-text" : "chatbubble-ellipses"} 
+                    name={item.documentId ? "document-text" : "chatbubble-ellipses"} 
                     size={24} 
                     color="#636ae8" 
                   />

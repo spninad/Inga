@@ -51,7 +51,6 @@ export default function DocumentDetailScreen() {
     if (!document) return;
     
     try {
-      console.log("Starting chat with document:", document);
       const chatSession = await startDocumentChat(document);
       router.push({
         pathname: '/chat/[id]',
