@@ -42,10 +42,19 @@ export async function startDocumentChat(document?: Document): Promise<ChatSessio
 
     initialMessages.push(userMessage);
   }
+  else{
+    const userMessage: Message = {
+      role: 'user',
+      content: [
+        { type: 'text', text: `I'd like to start a general chat regarding medical terms, procedures, etc.` },]
+    };
+
+    initialMessages.push(userMessage);
+  }
 
   return {
     id: Date.now().toString(),
-    title: document?.name || 'New Chat',
+    title: document?.name || 'General Chat',
     messages: initialMessages,
     documentId: document?.id,
   };
@@ -100,8 +109,6 @@ export async function sendMessage(chatSession: ChatSession, userMessage: string,
         }
       }
     }
-    
-    console.log("updatedMessages: ", updatedMessages);
     // Debug: log the messages payload and all image_url.url fields
     console.log('Payload to OpenAI:', JSON.stringify(updatedMessages, null, 2));
     updatedMessages.forEach((msg, idx) => {

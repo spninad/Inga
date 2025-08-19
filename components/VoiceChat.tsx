@@ -166,7 +166,6 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({
     socket.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log("Received:", data);
         
         // Handle different message types
         if (data.type === 'session.update') {
