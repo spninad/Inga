@@ -110,7 +110,6 @@ export async function updateDocument(documentId: string, updates: Partial<Docume
 // Delete a document and its related chats
 export async function deleteDocument(documentId: string, userId: string): Promise<boolean> {
   try {
-    console.log('Attempting to delete chats for document:', documentId);
     // First, delete all chats with this documentId
     const { data: chats, error: chatError } = await supabase
       .from('chats')
@@ -146,7 +145,6 @@ export async function deleteDocument(documentId: string, userId: string): Promis
     console.log('Related chats deleted for document:', documentId);
 
     // Now delete the document itself
-    console.log('Attempting to delete document:', documentId);
     const { error } = await supabase
       .from('documents')
       .delete()
@@ -155,7 +153,6 @@ export async function deleteDocument(documentId: string, userId: string): Promis
       console.error('Supabase delete error:', error);
       throw new Error(`Error deleting document: ${error.message}`);
     }
-    console.log('Document deleted successfully:', documentId);
     return true;
   } catch (error) {
     console.error('Error in deleteDocument:', error);

@@ -18,8 +18,6 @@ export default function DocumentsScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
 
-  console.log("documents screen");
-
   // Remove useEffect that calls getUserAndLoadDocuments to avoid double fetch
   // Replace useEffect with useFocusEffect to refresh on navigation
   useFocusEffect(
@@ -34,7 +32,6 @@ export default function DocumentsScreen() {
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'documents' },
           (payload: RealtimePostgresInsertPayload<Document>) => {
-            console.log('New document added:', payload.new);
             setDocuments((prevDocuments) => [payload.new, ...prevDocuments]);
           }
         )
@@ -96,13 +93,10 @@ export default function DocumentsScreen() {
     }
     
     try {
-      console.log("Starting chat with document:", document);
       const chatSession = await startDocumentChat(document);
-      console.log("chatSession: ", chatSession);
       
       try {
         await AsyncStorage.setItem(`chat_${chatSession.id}`, JSON.stringify(chatSession));
-        console.log("Saved chat session to AsyncStorage:", chatSession.id);
       } catch (storageError) {
         console.error("AsyncStorage error:", storageError);
       }

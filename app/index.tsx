@@ -12,8 +12,6 @@ import { useRouter } from 'expo-router';
 
 const Tab = createBottomTabNavigator();
 
-console.log("index screen");
-
 function HomeScreen() {
   const [fontsLoaded] = useFonts({
     Inter_400Regular,

@@ -19,6 +19,7 @@ import { supabase } from '../../lib/supabaseClient.ts';
 import { getDocumentById } from '../../lib/documents.service.ts';
 import { sendMessage } from '@/lib/chat.service.ts';
 import { Document } from '../../lib/documents.service.ts';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function ChatScreen() {
   const [chatSession, setChatSession] = useState<{ id: string; title: string; messages: any[] } | null>(null);
@@ -90,6 +91,8 @@ export default function ChatScreen() {
     let chat;
     try {
 
+      console.log("Looking for chat with user:", currentUserId, "doc:", params.documentId);
+
       const { data: existingChats, error: chatError } = await supabase
         .from('chats')
         .select('*')
@@ -115,22 +118,50 @@ export default function ChatScreen() {
         setChatSession({
           id: chat.id,
           title: chat.title,
-          messages: messages ? messages.map(msg => ({ ...msg.content, role: msg.role })) : [],
+          messages: messages ? messages.map(msg => ({
+            id: msg.id,
+            role: msg.role,
+            content: msg.content
+          })):[],
         });
         
       } else {
-        let chatTitle = 'New Chat';
+        const now = new Date();
+        const isoNow = now.toISOString();
+
+        let chatTitle = 'General Chat';
+        let chatDocumentId: string | null = null;
         if (params.documentId) {
           const document = await getDocumentById(params.documentId);
           if (document && document.name) {
             chatTitle = document.name; // Use the document's name as the chat title
           }
         }
+        else{
+          chatDocumentId = uuidv4();
+
+          console.log("id: ", chatDocumentId);
+
+          const { data: newDoc, error: docError } = await supabase
+            .from('documents')
+            .insert([{ user_id: currentUserId, id: chatDocumentId, name: chatTitle, created_at: isoNow,
+            updated_at: isoNow, }])
+            .select()
+            .single();
+
+          if (docError || !newDoc) {
+            console.error('Error creating new document:', docError);
+            setIsLoading(false);
+            return;
+          }
+
+          params.documentId = chatDocumentId;
+        }
 
         // Create chat
         const { data: chat, error: chatError } = await supabase
           .from('chats')
-          .insert([{ user_id: currentUserId, title: chatTitle, documentId: params.documentId }])
+          .insert([{ user_id: currentUserId, title: chatTitle, documentId: chatDocumentId, created_at: isoNow }])
           .select()
           .single();
 
@@ -218,6 +249,8 @@ export default function ChatScreen() {
       
       // Get assistant response from OpenAI via Supabase
       const updatedSession = await sendMessage(chatSession, languageMessage, document);
+
+      console.log(updatedSession);
       
       // Find the assistant's message (last in updatedSession.messages)
       const assistantMsg = updatedSession.messages[updatedSession.messages.length - 1];
@@ -232,14 +265,18 @@ export default function ChatScreen() {
       setTimeout(() => scrollToBottom(), 100);
       
       // Save assistant message to database
-      await supabase.from('messages').insert([
+      const { data: assistantMsgData, error: assistantMsgError } = await supabase.from('messages').insert([
         {
           chat_id: chatSession.id,
-          user_id: null,
+          user_id: currentUserId,
           content: assistantMsg.content,
           role: 'assistant',
         }
-      ]);
+      ]).select().single();
+
+      if(assistantMsgError){
+        console.log("error: ", assistantMsgError);
+      }
     } catch (error) {
       // Rollback optimistic update if error
       setChatSession(prev => prev ? {
