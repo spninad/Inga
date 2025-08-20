@@ -3,13 +3,16 @@
   "compilerOptions": {
     "strict": true,
     "allowImportingTsExtensions": true,
+    "isolatedModules": true,
     "paths": {
       "@/*": [
         "./*"
       ]
     },
-    "moduleResolution": "node16", // Added moduleResolution option
-    "module": "Node16" // Added module option to match moduleResolution
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": [
     "**/*.ts",

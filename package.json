@@ -13,10 +13,30 @@
     "lint": "expo lint"
   },
   "jest": {
-    "preset": "jest-expo"
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": [
+      "./jest.setup.js"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.(test|spec).(js|jsx|ts|tsx)",
+      "**/*.(test|spec).(js|jsx|ts|tsx)"
+    ],
+    "moduleNameMapper": {
+      "^../lib/(.*)$": "<rootDir>/lib/$1",
+      "^../../lib/(.*)$": "<rootDir>/lib/$1",
+      "^../types/(.*)$": "<rootDir>/types/$1",
+      "^../../types/(.*)$": "<rootDir>/types/$1"
+    },
+    "transform": {
+      "^.+\\.(ts|tsx)$": "ts-jest"
+    },
+    "testPathIgnorePatterns": [
+      "components/__tests__/ThemedText-test.tsx"
+    ]
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.3.0",
+    "@expo/metro-runtime": "~5.0.4",
     "@expo/vector-icons": "^14.0.2",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-picker/picker": "^2.11.1",
@@ -55,12 +75,12 @@
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "^0.20.0",
     "react-native-webview": "13.13.5",
-    "uuid": "^11.1.0",
-    "@expo/metro-runtime": "~5.0.4"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/jest": "^29.5.12",
+    "@types/node": "^24.3.0",
     "@types/react": "~19.0.0",
     "@types/react-native": "^0.73.0",
     "@types/react-test-renderer": "^19.0.0",
@@ -71,6 +91,7 @@
     "jest-expo": "~53.0.9",
     "react-test-renderer": "18.3.1",
     "supabase": "^2.20.5",
+    "ts-jest": "^29.4.1",
     "typescript": "^5.3.3"
   },
   "private": true
