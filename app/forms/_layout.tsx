@@ -19,10 +19,11 @@ export default function FormsLayout() {
         name="screens/ManualFormScreen" 
         options={{ title: 'Fill Form' }} 
       />
-      <Stack.Screen 
+      {/* Voice chat screen temporarily disabled */}
+      {/* <Stack.Screen 
         name="screens/VoiceChatScreen" 
         options={{ title: 'Fill by Voice' }} 
-      />
+      /> */}
     </Stack>
   );
 }

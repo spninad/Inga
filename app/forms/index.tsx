@@ -94,27 +94,34 @@ export default function FormsScreen() {
         <TouchableOpacity
           style={styles.formPreview}
           onPress={() => {
-            Alert.alert(
-              'Fill Form',
-              `Fill out "${item.name}" manually or with voice assistance?`,
-              [
-                {
-                  text: 'Manual',
-                  onPress: () => router.push({
-                    pathname: '/forms/screens/ManualFormScreen',
-                    params: { formId: item.id }
-                  })
-                },
-                {
-                  text: 'Voice',
-                  onPress: () => router.push({
-                    pathname: '/forms/screens/VoiceChatScreen',
-                    params: { formId: item.id }
-                  })
-                },
-                { text: 'Cancel', style: 'cancel' }
-              ]
-            );
+            // Navigate directly to manual form filling (voice temporarily disabled)
+            router.push({
+              pathname: '/forms/screens/ManualFormScreen',
+              params: { formId: item.id }
+            });
+            
+            // Previous alert with voice option (disabled):
+            // Alert.alert(
+            //   'Fill Form',
+            //   `Fill out "${item.name}" manually or with voice assistance?`,
+            //   [
+            //     {
+            //       text: 'Manual',
+            //       onPress: () => router.push({
+            //         pathname: '/forms/screens/ManualFormScreen',
+            //         params: { formId: item.id }
+            //       })
+            //     },
+            //     {
+            //       text: 'Voice',
+            //       onPress: () => router.push({
+            //         pathname: '/forms/screens/VoiceChatScreen',
+            //         params: { formId: item.id }
+            //       })
+            //     },
+            //     { text: 'Cancel', style: 'cancel' }
+            //   ]
+            // );
           }}
         >
           <View style={styles.formIcon}>

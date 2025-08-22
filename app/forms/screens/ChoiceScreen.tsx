@@ -13,19 +13,21 @@ export default function ChoiceScreen() {
     });
   };
 
-  const handleVoiceFill = () => {
-    router.push({
-      pathname: '/forms/screens/VoiceChatScreen',
-      params: { imageUri, formFields, documentId },
-    });
-  };
+  // Voice functionality disabled for now
+  // const handleVoiceFill = () => {
+  //   router.push({
+  //     pathname: '/forms/screens/VoiceChatScreen',
+  //     params: { imageUri, formFields, documentId },
+  //   });
+  // };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>How would you like to fill the form?</Text>
+      <Text style={styles.title}>Fill out the form manually</Text>
       <View style={styles.buttonContainer}>
         <Button title="Fill Manually" onPress={handleManualFill} />
-        <Button title="Use Voice Assistant" onPress={handleVoiceFill} />
+        {/* Voice option temporarily disabled */}
+        {/* <Button title="Use Voice Assistant" onPress={handleVoiceFill} /> */}
       </View>
     </View>
   );
