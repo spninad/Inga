@@ -6,6 +6,7 @@ import { useFonts, Inter_400Regular } from '@expo-google-fonts/inter';
 import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for icons
 import { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import DocumentsScreen from './documents.tsx'; // Import the Documents screen
+import FormsScreen from './forms/index.tsx'; // Import the Forms screen
 import ChatsScreen from './chats.tsx'; // Import the Chats screen
 import { useRouter } from 'expo-router';
 
@@ -83,11 +84,13 @@ export default function App() {
             iconName = 'home'; // Icon for Home tab
           } else if (route.name === 'Documents') {
             iconName = 'document-text'; // Icon for Documents tab
+          } else if (route.name === 'Forms') {
+            iconName = 'list'; // Icon for Forms tab
           } else if (route.name === 'Chats') {
             iconName = 'chatbubbles'; // Icon for Chats tab
           }
 
-          return <Ionicons name={iconName as 'home' | 'document-text'} size={size} color={color} />;
+          return <Ionicons name={iconName as 'home' | 'document-text' | 'list' | 'chatbubbles'} size={size} color={color} />;
         },
       })}
     >
@@ -105,6 +108,14 @@ export default function App() {
         options={{
           title: 'Documents',
           // Apply specific configuration for the Documents tab if needed
+        }}
+      />
+      <Tab.Screen 
+        name="Forms" 
+        component={FormsScreen} 
+        options={{
+          title: 'Forms',
+          // Apply specific configuration for the Forms tab if needed
         }}
       />
       <Tab.Screen 

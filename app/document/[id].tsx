@@ -32,7 +32,16 @@ export default function DocumentDetailScreen() {
   const loadDocument = async () => {
     try {
       setIsLoading(true);
-      const doc = await getDocumentById(params.id);
+      
+      // Get current user session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        Alert.alert('Authentication Required', 'Please sign in to view documents');
+        router.replace('/');
+        return;
+      }
+      
+      const doc = await getDocumentById(params.id, session.user.id);
       if (doc) {
         setDocument(doc);
       } else {

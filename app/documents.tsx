@@ -115,6 +115,23 @@ export default function DocumentsScreen() {
     }
   };
 
+  const handleExtractFormFromDocument = (document: Document) => {
+    if (!userId) {
+      Alert.alert('Authentication Required', 'Please sign in to extract forms');
+      return;
+    }
+    
+    if (!document.images || document.images.length === 0) {
+      Alert.alert('No Images', 'This document has no images to analyze for form extraction');
+      return;
+    }
+    
+    router.push({
+      pathname: '/extract-form',
+      params: { documentId: document.id }
+    });
+  };
+
   const handleDeleteDocument = async (document: Document) => {
     if (!userId) {
       Alert.alert('Authentication Required', 'Please sign in to delete documents');
@@ -233,6 +250,13 @@ export default function DocumentsScreen() {
                 
                 <TouchableOpacity 
                   style={styles.actionButton}
+                  onPress={() => handleExtractFormFromDocument(item)}
+                >
+                  <Ionicons name="document-text" size={22} color="#28a745" />
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.actionButton}
                   onPress={() => handleDeleteDocument(item)}
                 >
                   <Ionicons name="trash-outline" size={22} color="#ff6b6b" />
@@ -253,7 +277,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    padding: 20,
   },
   loadingContainer: {
     flex: 1,

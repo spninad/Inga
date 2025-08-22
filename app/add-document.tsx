@@ -336,12 +336,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    padding: 20,
   },
   backButton: {
     padding: 8,
   },
   content: {
-    padding: 16,
+    paddingHorizontal: 0,
   },
   formGroup: {
     marginBottom: 20,
