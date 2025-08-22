@@ -204,45 +204,4 @@ export async function updateFilledForm(filledFormId: string, updates: Partial<Fi
 }
 
 // Common form templates
-export const commonFormTemplates: FormTemplate[] = [
-  {
-    id: 'medical-intake',
-    name: 'Medical Intake Form',
-    description: 'Basic patient information and medical history',
-    category: 'healthcare',
-    schema: {
-      name: 'Medical Intake Form',
-      description: 'Basic patient information and medical history',
-      fields: [
-        { id: 'first-name', name: 'firstName', type: 'text', label: 'First Name', required: true },
-        { id: 'last-name', name: 'lastName', type: 'text', label: 'Last Name', required: true },
-        { id: 'dob', name: 'dateOfBirth', type: 'date', label: 'Date of Birth', required: true },
-        { id: 'phone', name: 'phone', type: 'phone', label: 'Phone Number', required: true },
-        { id: 'email', name: 'email', type: 'email', label: 'Email Address' },
-        { id: 'address', name: 'address', type: 'address', label: 'Address', required: true },
-        { id: 'emergency-contact', name: 'emergencyContact', type: 'text', label: 'Emergency Contact Name', required: true },
-        { id: 'emergency-phone', name: 'emergencyPhone', type: 'phone', label: 'Emergency Contact Phone', required: true },
-        { id: 'medical-history', name: 'medicalHistory', type: 'textarea', label: 'Medical History', placeholder: 'Please describe any relevant medical conditions, allergies, or medications' }
-      ]
-    }
-  },
-  {
-    id: 'insurance-form',
-    name: 'Insurance Information Form',
-    description: 'Patient insurance and billing information',
-    category: 'healthcare',
-    schema: {
-      name: 'Insurance Information Form',
-      description: 'Patient insurance and billing information',
-      fields: [
-        { id: 'patient-name', name: 'patientName', type: 'text', label: 'Patient Name', required: true },
-        { id: 'insurance-provider', name: 'insuranceProvider', type: 'text', label: 'Insurance Provider', required: true },
-        { id: 'policy-number', name: 'policyNumber', type: 'text', label: 'Policy Number', required: true },
-        { id: 'group-number', name: 'groupNumber', type: 'text', label: 'Group Number' },
-        { id: 'subscriber-name', name: 'subscriberName', type: 'text', label: 'Subscriber Name', required: true },
-        { id: 'subscriber-dob', name: 'subscriberDob', type: 'date', label: 'Subscriber Date of Birth', required: true },
-        { id: 'relationship', name: 'relationship', type: 'select', label: 'Relationship to Patient', required: true, options: ['Self', 'Spouse', 'Child', 'Parent', 'Other'] }
-      ]
-    }
-  }
-];
+export const commonFormTemplates: FormTemplate[] = []

@@ -62,8 +62,7 @@ export default function FormsScreen() {
   };
 
   const handleCreateForm = () => {
-    // This would navigate to a form builder screen
-    Alert.alert('Coming Soon', 'Form builder will be available in a future update');
+    router.push('/create-form');
   };
 
   if (isLoading) {
@@ -95,8 +94,27 @@ export default function FormsScreen() {
         <TouchableOpacity
           style={styles.formPreview}
           onPress={() => {
-            // Navigate to form details/edit screen
-            Alert.alert('Form Details', `${item.name}\n\n${item.description || 'No description'}`);
+            Alert.alert(
+              'Fill Form',
+              `Fill out "${item.name}" manually or with voice assistance?`,
+              [
+                {
+                  text: 'Manual',
+                  onPress: () => router.push({
+                    pathname: '/forms/screens/ManualFormScreen',
+                    params: { formId: item.id }
+                  })
+                },
+                {
+                  text: 'Voice',
+                  onPress: () => router.push({
+                    pathname: '/forms/screens/VoiceChatScreen',
+                    params: { formId: item.id }
+                  })
+                },
+                { text: 'Cancel', style: 'cancel' }
+              ]
+            );
           }}
         >
           <View style={styles.formIcon}>
