@@ -13,7 +13,7 @@ export default function FormsLayout() {
       />
       <Stack.Screen 
         name="screens/ChoiceScreen" 
-        options={{ title: 'Choose Input Method' }} 
+        options={{ title: 'Fill Form' }} 
       />
       <Stack.Screen 
         name="screens/ManualFormScreen" 

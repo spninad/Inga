@@ -44,6 +44,7 @@ export default function RootLayout() {
           <Stack.Screen name="documents" options={{ title: "Documents" }} />
           <Stack.Screen name="create-form" options={{ title: "Create Form", headerLargeTitle: false }} />
           <Stack.Screen name="select-document-for-form" options={{ title: "Select Document", headerLargeTitle: false }} />
+          <Stack.Screen name="extract-form" options={{ title: "Create Form", headerLargeTitle: false }} />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
