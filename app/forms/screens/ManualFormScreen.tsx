@@ -272,7 +272,7 @@ export default function ManualFormScreen() {
     <>
       <Stack.Screen 
         options={{
-          title: formSchema?.name || 'Fill Form',
+          title: 'Fill Form',
           headerLargeTitle: false,
         }}
       />
@@ -327,8 +327,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   scrollContainer: {
-    padding: 16,
-    paddingBottom: 100,
+    padding: 20,
+    paddingBottom: 120,
   },
   loadingContainer: {
     flex: 1,

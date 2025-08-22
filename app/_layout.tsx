@@ -35,13 +35,15 @@ export default function RootLayout() {
           {/* Configure individual screens */}
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" options={{ headerLargeTitle: false }} />
-          <Stack.Screen name="document/[id]" options={{ headerLargeTitle: false }} />
-          <Stack.Screen name="chat/[id]" options={{ headerLargeTitle: false }} />
+          <Stack.Screen name="document/[id]" options={{ title: "Document", headerLargeTitle: false }} />
+          <Stack.Screen name="chat/[id]" options={{ title: "Chat", headerLargeTitle: false }} />
           <Stack.Screen name="add-document" options={{ title: "Add Document", headerLargeTitle: false }} />
           <Stack.Screen name="select-form" options={{ title: "Select Form", headerLargeTitle: false }} />
           <Stack.Screen name="fill-form" options={{ title: "Fill Form", headerLargeTitle: false }} />
           <Stack.Screen name="voice-chat" options={{ headerShown: false }} />
           <Stack.Screen name="documents" options={{ title: "Documents" }} />
+          <Stack.Screen name="create-form" options={{ title: "Create Form", headerLargeTitle: false }} />
+          <Stack.Screen name="select-document-for-form" options={{ title: "Select Document", headerLargeTitle: false }} />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
