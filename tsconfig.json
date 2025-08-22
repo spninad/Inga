@@ -2,14 +2,11 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": [
         "./*"
       ]
-    },
-    "moduleResolution": "node16", // Added moduleResolution option
-    "module": "Node16" // Added module option to match moduleResolution
+    }
   },
   "include": [
     "**/*.ts",
