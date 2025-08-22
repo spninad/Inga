@@ -132,7 +132,7 @@ export default function ChatScreen() {
         let chatTitle = 'General Chat';
         let chatDocumentId: string | null = null;
         if (params.documentId) {
-          const document = await getDocumentById(params.documentId);
+          const document = await getDocumentById(params.documentId, currentUserId!);
           if (document && document.name) {
             chatTitle = document.name; // Use the document's name as the chat title
           }
@@ -242,8 +242,8 @@ export default function ChatScreen() {
       
       // Fetch the document and send it with the language message
       let document: Document | undefined = undefined;
-      if (params.documentId) {
-        const docResult = await getDocumentById(params.documentId);
+      if (params.documentId && currentUserId) {
+        const docResult = await getDocumentById(params.documentId, currentUserId);
         if (docResult) document = docResult;
       }
       
@@ -332,8 +332,8 @@ export default function ChatScreen() {
       userMessageId = userMsgData?.id;
       // Fetch the document and send it with every message
       let document: Document | undefined = undefined;
-      if (params.documentId) {
-        const docResult = await getDocumentById(params.documentId);
+      if (params.documentId && currentUserId) {
+        const docResult = await getDocumentById(params.documentId, currentUserId);
         if (docResult) document = docResult;
       }
       // Get assistant response from OpenAI via Supabase, always passing the document (or undefined)

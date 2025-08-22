@@ -38,7 +38,7 @@ export default function FillFormScreen() {
 
       // Load document and form
       const [docResult, forms] = await Promise.all([
-        getDocumentById(documentId),
+        getDocumentById(documentId, session.user.id),
         getForms(session.user.id)
       ]);
 
