@@ -29,6 +29,28 @@ export async function extractFormFromDocument(document: Document): Promise<Extra
       throw new Error('Document has no images to analyze');
     }
 
+    // Filter images to only include actual image MIME types (not text/plain)
+    const imageUrls = document.images.filter(imageUrl => {
+      if (typeof imageUrl !== 'string') return false;
+      
+      // Check if it's a data URL with image MIME type
+      if (imageUrl.startsWith('data:image/')) {
+        return true;
+      }
+      
+      // Check if it's a regular HTTP/HTTPS URL (assume it's an image)
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return true;
+      }
+      
+      // Skip text/plain or other non-image data URLs
+      return false;
+    });
+
+    if (imageUrls.length === 0) {
+      throw new Error('Document contains no image content to analyze. Please upload a document with actual images of forms.');
+    }
+
     // Get current user session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {
@@ -87,7 +109,7 @@ export async function extractFormFromDocument(document: Document): Promise<Extra
             type: 'text',
             text: 'Please analyze this document and determine if it contains a fillable form. If it does, extract all form fields. If not, indicate that it is not a form. Return the structured JSON format.'
           },
-          ...document.images.map(imageUrl => ({
+          ...imageUrls.map(imageUrl => ({
             type: 'image_url',
             image_url: {
               url: imageUrl
@@ -126,7 +148,7 @@ export async function extractFormFromDocument(document: Document): Promise<Extra
       // Clean up any markdown code blocks
       const cleanedContent = rawContent.replace(/```json\n?|\n?```/g, '').trim();
       extractedData = JSON.parse(cleanedContent);
-    } catch (parseError) {
+    } catch (_parseError) {
       console.error('Failed to parse OpenAI response:', completion.choices[0].message.content);
       throw new Error('Failed to parse form extraction results. The AI response was not in valid JSON format.');
     }
@@ -150,7 +172,7 @@ export async function extractFormFromDocument(document: Document): Promise<Extra
       id: `extracted_${Date.now()}`,
       name: extractedData.name || `Form from ${document.name}`,
       description: extractedData.description || `Extracted from document: ${document.name}`,
-      fields: extractedData.fields.map((field: any, index: number) => ({
+      fields: extractedData.fields.map((field: ExtractedField, index: number) => ({
         id: field.id || `field_${index + 1}`,
         name: field.name || `field${index + 1}`,
         label: field.label || field.name || `Field ${index + 1}`,
@@ -176,7 +198,7 @@ export async function extractFormFromDocument(document: Document): Promise<Extra
  * Save filled form data
  */
 export interface FilledFormData {
-  [fieldId: string]: any;
+  [fieldId: string]: string | boolean | number;
 }
 
 export async function saveFilledForm(
@@ -197,7 +219,7 @@ export async function saveFilledForm(
     const now = new Date().toISOString();
 
     // Save as a new document with all required fields
-    const { data, error } = await supabase
+    const { data: _data, error } = await supabase
       .from('documents')
       .insert({
         name: `${extractedForm.name} - Completed`,
