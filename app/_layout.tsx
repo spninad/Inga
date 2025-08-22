@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider } from '@/context/AuthContext';
@@ -15,6 +16,19 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) SplashScreen.hideAsync();
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
   return (
     <AuthProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -22,14 +36,21 @@ export default function RootLayout() {
           screenOptions={{
             headerLargeTitle: true,
             headerLargeTitleShadowVisible: false,
+            headerTransparent: true,
+            headerBlurEffect: 'systemChromeMaterial',
+            headerShadowVisible: false,
             headerLargeTitleStyle: {
               fontSize: 34,
               fontWeight: '700',
+              fontFamily: 'Inter_800ExtraBold',
+            },
+            headerTitleStyle: {
+              fontFamily: 'Inter_700Bold',
             },
             headerStyle: {
-              backgroundColor: '#FFFFFF',
+              backgroundColor: 'transparent',
             },
-            headerTintColor: '#333333',
+            headerTintColor: '#0F172A',
           }}
         >
           {/* Configure individual screens */}

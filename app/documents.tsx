@@ -4,12 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { getDocuments, Document, deleteDocument } from '../lib/documents.service.ts';
-import { startDocumentChat } from '../lib/chat.service.ts';
-import { supabase } from '../lib/supabaseClient.ts';
+import { getDocuments, Document, deleteDocument } from '../lib/documents.service';
+import { startDocumentChat } from '../lib/chat.service';
+import { supabase } from '../lib/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RealtimePostgresInsertPayload } from '@supabase/supabase-js'; // Import the type from Supabase
 import { Stack } from 'expo-router';
+import { Theme } from '@/constants/Theme';
 
 export default function DocumentsScreen() {
   // Add Stack.Screen component for this screen's title
@@ -171,7 +172,7 @@ export default function DocumentsScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#636ae8" />
+        <ActivityIndicator size="large" color={Theme.colors.brand} />
       </View>
     );
   }
@@ -199,7 +200,7 @@ export default function DocumentsScreen() {
     <View style={styles.container}>
 
       <TouchableOpacity style={styles.addButton} onPress={handleAddDocument}>
-        <Ionicons name="add-circle" size={24} color="white" />
+        <Ionicons name="add-circle" size={24} color={Theme.colors.textInverse} />
         <Text style={styles.addButtonText}>Add Document</Text>
       </TouchableOpacity>
 
@@ -229,7 +230,7 @@ export default function DocumentsScreen() {
                   </View>
                 ) : (
                   <View style={styles.noThumbnail}>
-                    <Ionicons name="document" size={32} color="#ccc" />
+                    <Ionicons name="document" size={32} color={Theme.colors.textSecondary} />
                   </View>
                 )}
                 <View style={styles.documentInfo}>
@@ -239,27 +240,24 @@ export default function DocumentsScreen() {
                   </Text>
                 </View>
               </TouchableOpacity>
-              
               <View style={styles.documentActions}>
                 <TouchableOpacity 
                   style={styles.actionButton}
                   onPress={() => handleChatWithDocument(item)}
                 >
-                  <Ionicons name="chatbubble" size={22} color="#636ae8" />
+                  <Ionicons name="chatbubble" size={22} color={Theme.colors.brand} />
                 </TouchableOpacity>
-                
                 <TouchableOpacity 
                   style={styles.actionButton}
                   onPress={() => handleExtractFormFromDocument(item)}
                 >
-                  <Ionicons name="document-text" size={22} color="#28a745" />
+                  <Ionicons name="document-text" size={22} color={Theme.colors.success} />
                 </TouchableOpacity>
-                
                 <TouchableOpacity 
                   style={styles.actionButton}
                   onPress={() => handleDeleteDocument(item)}
                 >
-                  <Ionicons name="trash-outline" size={22} color="#ff6b6b" />
+                  <Ionicons name="trash-outline" size={22} color={Theme.colors.danger} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -267,144 +265,165 @@ export default function DocumentsScreen() {
           contentContainerStyle={styles.documentsList}
           showsVerticalScrollIndicator={false}
         />
-      )}
-    </View>
-    </>
-  );
+    )}
+  </View>
+  </>
+);
+
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    padding: 20,
+    backgroundColor: Theme.colors.background,
+    padding: 24,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Theme.colors.background,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#333',
+    fontSize: 32,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: Theme.colors.textPrimary,
+    letterSpacing: -0.5,
+    fontFamily: 'Inter_800ExtraBold',
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#636ae8',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
+    backgroundColor: Theme.colors.brand,
+    borderRadius: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    marginBottom: 24,
+    ...Theme.shadows.md,
   },
   addButtonText: {
-    color: 'white',
+    color: Theme.colors.textInverse,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+    fontFamily: 'Inter_600SemiBold',
   },
   documentsList: {
     paddingBottom: 20,
   },
   documentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
+    backgroundColor: Theme.colors.surfaceElevated,
+    borderRadius: 20,
+    marginBottom: 16,
+    overflow: 'hidden',
+    ...Theme.shadows.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.lineMuted,
   },
   documentPreview: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 20,
   },
   thumbnailContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 6,
-    backgroundColor: 'rgba(99, 106, 232, 0.1)',
+    width: 64,
+    height: 64,
+    backgroundColor: Theme.colors.surfaceMuted,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   noThumbnail: {
     width: 60,
     height: 60,
     borderRadius: 6,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: Theme.colors.surfaceMuted,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   imageCount: {
     fontSize: 12,
-    color: '#636ae8',
+    color: Theme.colors.brand,
     fontWeight: '500',
+    fontFamily: 'Inter_600SemiBold',
   },
   documentInfo: {
     flex: 1,
   },
   documentName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    fontSize: 18,
+    fontWeight: '600',
+    color: Theme.colors.textPrimary,
+    letterSpacing: -0.2,
+    fontFamily: 'Inter_700Bold',
   },
   documentDate: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
+    fontSize: 14,
+    color: Theme.colors.textSecondary,
+    marginTop: 6,
+    fontWeight: '500',
+    fontFamily: 'Inter_600SemiBold',
   },
   documentActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingRight: 8,
   },
   actionButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
+    borderRadius: 12,
+    backgroundColor: Theme.colors.surfaceMuted,
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 50,
+    marginTop: 80,
   },
   emptyStateText: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#333',
-    marginTop: 16,
+    fontSize: 24,
+    fontWeight: '600',
+    color: Theme.colors.textPrimary,
+    marginTop: 24,
+    letterSpacing: -0.3,
+    fontFamily: 'Inter_700Bold',
   },
   emptyStateSubText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: 16,
+    color: Theme.colors.textSecondary,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 12,
     maxWidth: '80%',
+    lineHeight: 24,
+    fontFamily: 'Inter_400Regular',
   },
   authRequiredContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 50,
+    marginTop: 80,
   },
   authRequiredText: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#333',
+    fontSize: 24,
+    fontWeight: '600',
+    color: Theme.colors.textPrimary,
     marginTop: 16,
+    fontFamily: 'Inter_700Bold',
   },
   authRequiredSubText: {
     fontSize: 14,
-    color: '#999',
+    color: Theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: 8,
     maxWidth: '80%',
+    fontFamily: 'Inter_400Regular',
   },
 });

@@ -13,15 +13,15 @@ import {
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import { supabase } from '../lib/supabaseClient.ts';
-import { getDocumentById } from '../lib/documents.service.ts';
+import { supabase } from '../lib/supabaseClient';
+import { getDocumentById } from '../lib/documents.service';
 import { 
   extractFormFromDocument, 
   ExtractedForm, 
   ExtractedField, 
   FilledFormData,
   saveFilledForm 
-} from '../lib/form-extraction.service.ts';
+} from '../lib/form-extraction.service';
 
 export default function ExtractFormScreen() {
   const router = useRouter();
@@ -144,15 +144,15 @@ export default function ExtractFormScreen() {
       // Validate email format
       if (field.type === 'email' && formData[field.id]) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(formData[field.id])) {
+        if (!emailRegex.test(String(formData[field.id]))) {
           newErrors[field.id] = 'Please enter a valid email address';
         }
       }
       
       // Validate phone format (basic validation)
       if (field.type === 'phone' && formData[field.id]) {
-        const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-        if (!phoneRegex.test(formData[field.id].replace(/[\s\-\(\)]/g, ''))) {
+        const phoneRegex = /^[\+]?[^\D]{7,16}$/;
+        if (!phoneRegex.test(String(formData[field.id]).replace(/[\s\-\(\)]/g, ''))) {
           newErrors[field.id] = 'Please enter a valid phone number';
         }
       }
@@ -209,7 +209,7 @@ export default function ExtractFormScreen() {
             </Text>
             <TextInput
               style={[styles.textArea, hasError && styles.inputError]}
-              value={formData[field.id] || ''}
+              value={String(formData[field.id] ?? '')}
               onChangeText={(value) => updateField(field.id, value)}
               placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
               multiline
@@ -224,10 +224,10 @@ export default function ExtractFormScreen() {
         return (
           <View key={field.id} style={styles.checkboxContainer}>
             <Switch
-              value={formData[field.id] || false}
+              value={Boolean(formData[field.id])}
               onValueChange={(value) => updateField(field.id, value)}
               trackColor={{ false: '#767577', true: '#636ae8' }}
-              thumbColor={formData[field.id] ? '#ffffff' : '#f4f3f4'}
+              thumbColor={Boolean(formData[field.id]) ? '#ffffff' : '#f4f3f4'}
             />
             <Text style={styles.checkboxLabel}>
               {field.label}
@@ -246,7 +246,7 @@ export default function ExtractFormScreen() {
             </Text>
             <View style={[styles.pickerContainer, hasError && styles.inputError]}>
               <Picker
-                selectedValue={formData[field.id] || ''}
+                selectedValue={String(formData[field.id] ?? '')}
                 onValueChange={(value) => updateField(field.id, value)}
                 style={styles.picker}
               >
@@ -269,7 +269,7 @@ export default function ExtractFormScreen() {
             </Text>
             <TextInput
               style={[styles.textInput, hasError && styles.inputError]}
-              value={formData[field.id] || ''}
+              value={String(formData[field.id] ?? '')}
               onChangeText={(value) => updateField(field.id, value)}
               placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
               keyboardType={field.type === 'email' ? 'email-address' : 

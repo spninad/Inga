@@ -3,16 +3,22 @@
   "compilerOptions": {
     "strict": true,
     "allowImportingTsExtensions": true,
+    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
       ]
     },
-    "moduleResolution": "node16", // Added moduleResolution option
-    "module": "Node16" // Added module option to match moduleResolution
+    "moduleResolution": "Bundler",
+    "module": "esnext"
   },
   "include": [
     "**/*.ts",
     "**/*.tsx"
+  ],
+  "exclude": [
+    "supabase/functions/**",
+    "utils/**",
+    "lib/supabase.ts"
   ]
 }
