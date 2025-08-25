@@ -235,9 +235,34 @@ export async function regenerateFormFromDocument(formId: string, userId?: string
       throw new Error('Form not found or not created from a document');
     }
     
-    // This would normally re-extract from the document
-    // For now, just create a copy with updated timestamp
+    // Import document service to get the source document
+    const { getDocumentById } = await import('./documents.service.ts');
+    const { extractFormFromDocument } = await import('./form-extraction.service.ts');
+    
+    // Get the source document
+    const document = await getDocumentById(form.document_id, userId);
+    if (!document) {
+      throw new Error('Source document not found');
+    }
+    
+    // Re-extract form from the document
+    const extractedForm = await extractFormFromDocument(document);
+    if (!extractedForm) {
+      throw new Error('Failed to extract form from document');
+    }
+    
+    // Update the existing form with new fields while preserving name and ID
     const updatedForm = await updateForm(formId, {
+      fields: extractedForm.fields.map(field => ({
+        id: field.id,
+        name: field.name,
+        type: field.type,
+        label: field.label,
+        required: field.required || false,
+        placeholder: field.placeholder,
+        options: field.options
+      })),
+      description: extractedForm.description,
       updated_at: new Date().toISOString()
     });
     

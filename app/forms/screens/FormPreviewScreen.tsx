@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, Button, StyleSheet, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { processForm } from '../services/FormProcessingService.ts';
 
 export default function FormPreviewScreen() {
@@ -40,15 +41,36 @@ export default function FormPreviewScreen() {
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.image} />
         ) : (
-          <Text>No image found.</Text>
+          <View style={styles.noImageContainer}>
+            <Ionicons name="image-outline" size={64} color="#ccc" />
+            <Text style={styles.noImageText}>No image found</Text>
+          </View>
         )}
       </View>
       <View style={styles.buttonContainer}>
-        <Button title="Retake" onPress={handleRetake} disabled={isLoading} />
+        <TouchableOpacity 
+          style={[styles.button, styles.retakeButton]} 
+          onPress={handleRetake} 
+          disabled={isLoading}
+        >
+          <Ionicons name="camera-reverse" size={20} color="#666" />
+          <Text style={styles.retakeButtonText}>Retake</Text>
+        </TouchableOpacity>
+        
         {isLoading ? (
-          <ActivityIndicator size="large" color="#0000ff" />
+          <View style={[styles.button, styles.confirmButton]}>
+            <ActivityIndicator size="small" color="#fff" />
+            <Text style={styles.confirmButtonText}>Processing...</Text>
+          </View>
         ) : (
-          <Button title="Confirm" onPress={handleConfirm} disabled={!imageUri} />
+          <TouchableOpacity 
+            style={[styles.button, styles.confirmButton, !imageUri && styles.buttonDisabled]} 
+            onPress={handleConfirm} 
+            disabled={!imageUri}
+          >
+            <Ionicons name="checkmark" size={20} color="#fff" />
+            <Text style={styles.confirmButtonText}>Confirm</Text>
+          </TouchableOpacity>
         )}
       </View>
     </View>
@@ -61,29 +83,75 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
+    backgroundColor: '#FFFFFF',
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 20,
+    color: '#333',
   },
   previewArea: {
     width: '100%',
     height: '70%',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
   image: {
     width: '100%',
     height: '100%',
+    resizeMode: 'contain',
+  },
+  noImageContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noImageText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 12,
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
+    gap: 16,
+  },
+  button: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  retakeButton: {
+    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  retakeButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+  },
+  confirmButton: {
+    backgroundColor: '#636ae8',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });

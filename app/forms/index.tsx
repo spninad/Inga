@@ -104,25 +104,11 @@ export default function FormsScreen() {
         return;
       }
 
-      // For now, just show count. In the future, this could navigate to a detailed view
-      Alert.alert(
-        'Filled Forms',
-        `Found ${filledFormsForThisForm.length} filled form(s):\n` +
-        `• ${filledFormsForThisForm.filter(f => f.completed).length} completed\n` +
-        `• ${filledFormsForThisForm.filter(f => !f.completed).length} drafts`,
-        [
-          { text: 'OK' },
-          {
-            text: 'Fill New',
-            onPress: () => {
-              router.push({
-                pathname: '/forms/screens/ManualFormScreen',
-                params: { formId: form.id }
-              });
-            }
-          }
-        ]
-      );
+      // Navigate to the filled forms screen
+      router.push({
+        pathname: '/forms/screens/FilledFormsScreen',
+        params: { formId: form.id }
+      });
     } catch (error) {
       console.error('Error viewing filled forms:', error);
       Alert.alert('Error', 'Failed to load filled forms');
