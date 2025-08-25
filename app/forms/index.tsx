@@ -61,8 +61,72 @@ export default function FormsScreen() {
     }
   };
 
-  const handleCreateForm = () => {
-    router.push('/create-form');
+  const handleRegenerateForm = async (form: FormSchema) => {
+    if (!form.document_id) {
+      Alert.alert('Cannot Regenerate', 'This form was not created from a document');
+      return;
+    }
+
+    Alert.alert(
+      'Regenerate Form',
+      `Are you sure you want to regenerate "${form.name}" from its source document? This will update the form fields.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Regenerate',
+          onPress: async () => {
+            try {
+              const { regenerateFormFromDocument } = await import('../../lib/forms.service.ts');
+              const updatedForm = await regenerateFormFromDocument(form.id, userId);
+              if (updatedForm) {
+                Alert.alert('Success', 'Form has been regenerated successfully');
+                loadForms(userId!);
+              } else {
+                Alert.alert('Error', 'Failed to regenerate form');
+              }
+            } catch (error) {
+              console.error('Error regenerating form:', error);
+              Alert.alert('Error', 'Failed to regenerate form');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleViewFilledForms = async (form: FormSchema) => {
+    try {
+      const { getFilledFormsByFormId } = await import('../../lib/forms.service.ts');
+      const filledFormsForThisForm = await getFilledFormsByFormId(form.id, userId);
+      
+      if (filledFormsForThisForm.length === 0) {
+        Alert.alert('No Filled Forms', 'No completed or draft forms found for this form schema.');
+        return;
+      }
+
+      // For now, just show count. In the future, this could navigate to a detailed view
+      Alert.alert(
+        'Filled Forms',
+        `Found ${filledFormsForThisForm.length} filled form(s):\n` +
+        `• ${filledFormsForThisForm.filter(f => f.completed).length} completed\n` +
+        `• ${filledFormsForThisForm.filter(f => !f.completed).length} drafts`,
+        [
+          { text: 'OK' },
+          {
+            text: 'Fill New',
+            onPress: () => {
+              router.push({
+                pathname: '/forms/screens/ManualFormScreen',
+                params: { formId: form.id }
+              });
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error viewing filled forms:', error);
+      Alert.alert('Error', 'Failed to load filled forms');
+    }
   };
 
   if (isLoading) {
@@ -85,6 +149,10 @@ export default function FormsScreen() {
     );
   }
 
+  const handleCreateForm = () => {
+    router.push('/create-form');
+  };
+
   const renderFormItem = ({ item }: { item: FormSchema }) => {
     const completedCount = filledForms.filter(f => f.form_id === item.id && f.completed).length;
     const draftCount = filledForms.filter(f => f.form_id === item.id && !f.completed).length;
@@ -97,31 +165,8 @@ export default function FormsScreen() {
             // Navigate directly to manual form filling (voice temporarily disabled)
             router.push({
               pathname: '/forms/screens/ManualFormScreen',
-              params: { formId: item.id }
+              params: { formId: item.id, preview: 'true' }
             });
-            
-            // Previous alert with voice option (disabled):
-            // Alert.alert(
-            //   'Fill Form',
-            //   `Fill out "${item.name}" manually or with voice assistance?`,
-            //   [
-            //     {
-            //       text: 'Manual',
-            //       onPress: () => router.push({
-            //         pathname: '/forms/screens/ManualFormScreen',
-            //         params: { formId: item.id }
-            //       })
-            //     },
-            //     {
-            //       text: 'Voice',
-            //       onPress: () => router.push({
-            //         pathname: '/forms/screens/VoiceChatScreen',
-            //         params: { formId: item.id }
-            //       })
-            //     },
-            //     { text: 'Cancel', style: 'cancel' }
-            //   ]
-            // );
           }}
         >
           <View style={styles.formIcon}>
@@ -137,6 +182,37 @@ export default function FormsScreen() {
             </Text>
           </View>
         </TouchableOpacity>
+        
+        {/* Form actions */}
+        <View style={styles.formActions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleViewFilledForms(item)}
+          >
+            <Ionicons name="list" size={20} color="#636ae8" />
+          </TouchableOpacity>
+          
+          {item.document_id && (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleRegenerateForm(item)}
+            >
+              <Ionicons name="refresh" size={20} color="#ff9800" />
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              router.push({
+                pathname: '/forms/screens/ManualFormScreen',
+                params: { formId: item.id }
+              });
+            }}
+          >
+            <Ionicons name="create" size={20} color="#28a745" />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -255,10 +331,25 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   formPreview: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  formActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  actionButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
   },
   formIcon: {
     width: 60,

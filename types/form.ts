@@ -20,6 +20,7 @@ export interface FormSchema {
   created_at: string;
   updated_at: string;
   user_id?: string;
+  document_id?: string; // Track which document this form was created from
 }
 
 // Filled form data interface
