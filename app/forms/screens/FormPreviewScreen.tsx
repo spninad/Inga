@@ -9,25 +9,25 @@ export default function FormPreviewScreen() {
   const { imageUri } = useLocalSearchParams<{ imageUri: string }>();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!imageUri) return;
 
     setIsLoading(true);
-    try {
-      const formFields = await processForm(imageUri);
-      console.log('Processed form fields:', formFields);
-
-      router.push({
-        pathname: '/forms/screens/ChoiceScreen',
-        params: { imageUri, formFields: JSON.stringify({ fields: formFields }) },
+    processForm(imageUri)
+      .then(formFields => {
+        console.log('Processed form fields:', formFields);
+        router.push({
+          pathname: '/forms/screens/ChoiceScreen',
+          params: { imageUri, formFields: JSON.stringify({ fields: formFields }) },
+        });
+      })
+      .catch(error => {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        Alert.alert('Processing Failed', errorMessage);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      Alert.alert('Processing Failed', errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleRetake = () => {

@@ -59,5 +59,3 @@ export const processForm = async (imageInput: string): Promise<FormField[]> => {
     throw new Error(`Failed to process form: ${errorMessage}`);
   }
 };
-
-export default processForm
