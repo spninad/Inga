@@ -14,10 +14,10 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../../lib/supabaseClient.ts';
-import { getFormById } from '../../../lib/forms.service.ts';
-import { saveFilledForm } from '../../../lib/forms.service.ts';
-import { FormSchema, FormField } from '../../../types/form.ts';
+import { supabase } from '../../../lib/supabaseClient';
+import { getFormById } from '../../../lib/forms.service';
+import { saveFilledForm } from '../../../lib/forms.service';
+import { FormSchema, FormField } from '../../../types/form';
 
 export default function ManualFormScreen() {
   const router = useRouter();
@@ -288,25 +288,28 @@ export default function ManualFormScreen() {
   const renderPreviewField = (field: FormField) => {
     return (
       <View key={field.id} style={styles.previewFieldContainer}>
-        <Text style={styles.previewLabel}>
-          {field.label}
-          {field.required && <Text style={styles.required}> *</Text>}
-        </Text>
-        <Text style={styles.previewFieldType}>
-          Type: {field.type.charAt(0).toUpperCase() + field.type.slice(1)}
-          {field.options && ` (${field.options.length} options)`}
-        </Text>
+        <View style={styles.previewFieldHeader}>
+          <Text style={styles.previewLabel}>
+            {field.label}
+            {field.required && <Text style={styles.required}> *</Text>}
+          </Text>
+          <View style={styles.previewTypeChip}>
+            <Text style={styles.previewTypeText}>
+              {field.type.charAt(0).toUpperCase() + field.type.slice(1)}
+            </Text>
+          </View>
+        </View>
         {field.placeholder && (
           <Text style={styles.previewPlaceholder}>
-            Placeholder: {field.placeholder}
+            {field.placeholder}
           </Text>
         )}
         {field.options && (
           <View style={styles.previewOptions}>
-            <Text style={styles.previewOptionsLabel}>Options:</Text>
-            {field.options.map((option, index) => (
-              <Text key={index} style={styles.previewOption}>• {option}</Text>
-            ))}
+            <Text style={styles.previewOptionsLabel}>Options: </Text>
+            <Text style={styles.previewOptionsText}>
+              {field.options.join(', ')}
+            </Text>
           </View>
         )}
       </View>
@@ -428,13 +431,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   description: {
     fontSize: 16,
@@ -590,41 +593,55 @@ const styles = StyleSheet.create({
   previewFieldContainer: {
     backgroundColor: '#f8f9fa',
     borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-    borderLeftWidth: 4,
+    padding: 12,
+    marginBottom: 8,
+    borderLeftWidth: 3,
     borderLeftColor: '#636ae8',
+  },
+  previewFieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
   },
   previewLabel: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 4,
+    flex: 1,
   },
-  previewFieldType: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+  previewTypeChip: {
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  previewTypeText: {
+    fontSize: 12,
+    color: '#1976d2',
+    fontWeight: '500',
   },
   previewPlaceholder: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: '#888',
     fontStyle: 'italic',
-    marginBottom: 8,
-  },
-  previewOptions: {
-    marginTop: 8,
-  },
-  previewOptionsLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
     marginBottom: 4,
   },
-  previewOption: {
-    fontSize: 14,
+  previewOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  previewOptionsLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#555',
+    marginRight: 4,
+  },
+  previewOptionsText: {
+    fontSize: 13,
     color: '#666',
-    marginLeft: 8,
-    marginBottom: 2,
+    flex: 1,
   },
 });

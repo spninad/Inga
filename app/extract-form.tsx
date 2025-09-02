@@ -8,20 +8,21 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  Switch
+  Switch,
+  Modal,
+  FlatList
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
-import { supabase } from '../lib/supabaseClient.ts';
-import { getDocumentById } from '../lib/documents.service.ts';
+import { supabase } from '../lib/supabaseClient';
+import { getDocumentById } from '../lib/documents.service';
 import { 
   extractFormFromDocument, 
   ExtractedForm, 
   ExtractedField, 
   FilledFormData,
   saveFilledForm 
-} from '../lib/form-extraction.service.ts';
+} from '../lib/form-extraction.service';
 
 export default function ExtractFormScreen() {
   const router = useRouter();
@@ -34,6 +35,7 @@ export default function ExtractFormScreen() {
   const [formData, setFormData] = useState<FilledFormData>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [userId, setUserId] = useState<string | null>(null);
+  const [selectedDropdown, setSelectedDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     extractForm();
@@ -144,7 +146,8 @@ export default function ExtractFormScreen() {
       // Validate email format
       if (field.type === 'email' && formData[field.id]) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(formData[field.id])) {
+        const emailValue = String(formData[field.id]);
+        if (!emailRegex.test(emailValue)) {
           newErrors[field.id] = 'Please enter a valid email address';
         }
       }
@@ -152,7 +155,8 @@ export default function ExtractFormScreen() {
       // Validate phone format (basic validation)
       if (field.type === 'phone' && formData[field.id]) {
         const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-        if (!phoneRegex.test(formData[field.id].replace(/[\s\-\(\)]/g, ''))) {
+        const phoneValue = String(formData[field.id]).replace(/[\s\-\(\)]/g, '');
+        if (!phoneRegex.test(phoneValue)) {
           newErrors[field.id] = 'Please enter a valid phone number';
         }
       }
@@ -209,7 +213,7 @@ export default function ExtractFormScreen() {
             </Text>
             <TextInput
               style={[styles.textArea, hasError && styles.inputError]}
-              value={formData[field.id] || ''}
+              value={String(formData[field.id] || '')}
               onChangeText={(value) => updateField(field.id, value)}
               placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
               multiline
@@ -224,7 +228,7 @@ export default function ExtractFormScreen() {
         return (
           <View key={field.id} style={styles.checkboxContainer}>
             <Switch
-              value={formData[field.id] || false}
+              value={Boolean(formData[field.id])}
               onValueChange={(value) => updateField(field.id, value)}
               trackColor={{ false: '#767577', true: '#636ae8' }}
               thumbColor={formData[field.id] ? '#ffffff' : '#f4f3f4'}
@@ -244,18 +248,50 @@ export default function ExtractFormScreen() {
               {field.label}
               {field.required && <Text style={styles.required}> *</Text>}
             </Text>
-            <View style={[styles.pickerContainer, hasError && styles.inputError]}>
-              <Picker
-                selectedValue={formData[field.id] || ''}
-                onValueChange={(value) => updateField(field.id, value)}
-                style={styles.picker}
+            <TouchableOpacity
+              style={[styles.dropdownButton, hasError && styles.inputError]}
+              onPress={() => setSelectedDropdown(field.id)}
+            >
+              <Text style={[styles.dropdownText, !formData[field.id] && styles.placeholderText]}>
+                {formData[field.id] || `Select ${field.label.toLowerCase()}`}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+            
+            <Modal
+              visible={selectedDropdown === field.id}
+              transparent={true}
+              animationType="fade"
+              onRequestClose={() => setSelectedDropdown(null)}
+            >
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={() => setSelectedDropdown(null)}
               >
-                <Picker.Item label={`Select ${field.label.toLowerCase()}`} value="" />
-                {field.options?.map((option, index) => (
-                  <Picker.Item key={index} label={option} value={option} />
-                ))}
-              </Picker>
-            </View>
+                <View style={styles.dropdownModal}>
+                  <FlatList
+                    data={field.options || []}
+                    keyExtractor={(item, index) => index.toString()}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={styles.dropdownOption}
+                        onPress={() => {
+                          updateField(field.id, item);
+                          setSelectedDropdown(null);
+                        }}
+                      >
+                        <Text style={styles.dropdownOptionText}>{item}</Text>
+                        {formData[field.id] === item && (
+                          <Ionicons name="checkmark" size={20} color="#636ae8" />
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  />
+                </View>
+              </TouchableOpacity>
+            </Modal>
+            
             {hasError && <Text style={styles.errorText}>{errors[field.id]}</Text>}
           </View>
         );
@@ -269,7 +305,7 @@ export default function ExtractFormScreen() {
             </Text>
             <TextInput
               style={[styles.textInput, hasError && styles.inputError]}
-              value={formData[field.id] || ''}
+              value={String(formData[field.id] || '')}
               onChangeText={(value) => updateField(field.id, value)}
               placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
               keyboardType={field.type === 'email' ? 'email-address' : 
@@ -403,20 +439,21 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: 'white',
-    padding: 20,
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e1e5e9',
   },
   formTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   formDescription: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 16,
+    marginBottom: 12,
+    lineHeight: 20,
   },
   progressContainer: {
     flexDirection: 'row',
@@ -444,21 +481,21 @@ const styles = StyleSheet.create({
   },
   fieldContainer: {
     backgroundColor: 'white',
-    padding: 16,
-    marginTop: 8,
+    padding: 12,
+    marginTop: 6,
     marginHorizontal: 16,
     borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
   },
   fieldLabel: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   required: {
     color: '#ff6b6b',
@@ -467,9 +504,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e1e5e9',
     borderRadius: 6,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 16,
     backgroundColor: '#ffffff',
+    minHeight: 40,
   },
   textArea: {
     borderWidth: 1,
@@ -478,7 +517,8 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#ffffff',
-    minHeight: 80,
+    minHeight: 60,
+    maxHeight: 120,
   },
   inputError: {
     borderColor: '#ff6b6b',
@@ -487,15 +527,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
-    padding: 16,
-    marginTop: 8,
+    padding: 12,
+    marginTop: 6,
     marginHorizontal: 16,
     borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
   },
   checkboxLabel: {
     fontSize: 16,
@@ -504,19 +544,66 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
   },
-  pickerContainer: {
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: '#e1e5e9',
     borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     backgroundColor: '#ffffff',
+    minHeight: 44,
   },
-  picker: {
-    height: 50,
+  dropdownText: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
+  },
+  placeholderText: {
+    color: '#999',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownModal: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    maxHeight: 300,
+    width: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  dropdownOptionText: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
   },
   errorText: {
     color: '#ff6b6b',
-    fontSize: 12,
+    fontSize: 13,
     marginTop: 4,
+    fontWeight: '500',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
   buttonContainer: {
     padding: 16,
