@@ -312,7 +312,8 @@ export default function DocumentsScreen() {
               </View>
             </ThemedCard>
           )}
-          contentContainerStyle={styles.documentsList}
+          style={styles.documentsList}
+          contentContainerStyle={styles.documentsListContent}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -340,6 +341,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   documentsList: {
+    flex: 1,
+  },
+  documentsListContent: {
     paddingBottom: 20,
   },
   documentItem: {

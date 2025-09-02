@@ -213,7 +213,8 @@ export default function ChatsScreen() {
                 </TouchableOpacity>
               </ThemedCard>
             )}
-            contentContainerStyle={styles.chatsList}
+            style={styles.chatsList}
+            contentContainerStyle={styles.chatsListContent}
             showsVerticalScrollIndicator={false}
           />
         )}
@@ -252,6 +253,9 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   chatsList: {
+    flex: 1,
+  },
+  chatsListContent: {
     paddingBottom: 20,
   },
   chatItem: {

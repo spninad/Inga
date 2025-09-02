@@ -229,6 +229,7 @@ export default function FormsScreen() {
               keyExtractor={(item) => item.id}
               renderItem={renderFormItem}
               style={styles.section}
+              contentContainerStyle={styles.sectionContent}
               showsVerticalScrollIndicator={false}
             />
           </>
@@ -268,7 +269,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   section: {
-    marginBottom: 16,
+    flex: 1,
+  },
+  sectionContent: {
+    paddingBottom: 16,
   },
   formItem: {
     padding: 12,
