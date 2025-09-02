@@ -19,7 +19,6 @@ import { supabase } from '../../lib/supabaseClient.ts';
 import { getDocumentById } from '../../lib/documents.service.ts';
 import { sendMessage } from '@/lib/chat.service.ts';
 import { Document } from '../../lib/documents.service.ts';
-import { v4 as uuidv4 } from 'uuid';
 
 export default function ChatScreen() {
   const [chatSession, setChatSession] = useState<{ id: string; title: string; messages: any[] } | null>(null);
