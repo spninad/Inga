@@ -29,6 +29,8 @@ export default function ManualFormScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [showCompletedPreview, setShowCompletedPreview] = useState(false);
+  const [savedFormId, setSavedFormId] = useState<string | null>(null);
 
   useEffect(() => {
     loadForm();
@@ -148,14 +150,9 @@ export default function ManualFormScreen() {
         throw new Error('Failed to save form');
       }
 
-      Alert.alert(
-        'Form Saved Successfully!',
-        `Your completed form "${formSchema.name}" has been saved.`,
-        [
-          { text: 'View Forms', onPress: () => router.replace('/forms') },
-          { text: 'OK', onPress: () => router.back() }
-        ]
-      );
+      // Show completed form preview
+      setSavedFormId(filledForm.id);
+      setShowCompletedPreview(true);
 
     } catch (error) {
       console.error('Error saving form:', error);
@@ -316,12 +313,96 @@ export default function ManualFormScreen() {
     );
   };
 
+  const renderCompletedField = (field: FormField) => {
+    const value = formData[field.id];
+    const displayValue = field.type === 'checkbox' 
+      ? (value ? 'Yes' : 'No')
+      : (value || 'Not provided');
+
+    return (
+      <View key={field.id} style={styles.completedFieldContainer}>
+        <Text style={styles.completedFieldLabel}>
+          {field.label}
+          {field.required && <Text style={styles.required}> *</Text>}
+        </Text>
+        <Text style={styles.completedFieldValue}>{displayValue}</Text>
+      </View>
+    );
+  };
+
+  const renderCompletedPreview = () => {
+    if (!formSchema) return null;
+
+    return (
+      <View style={styles.completedPreviewContainer}>
+        <ScrollView contentContainerStyle={styles.completedScrollContainer}>
+          <View style={styles.completedHeader}>
+            <Ionicons name="checkmark-circle" size={48} color="#28a745" />
+            <Text style={styles.completedTitle}>Form Completed Successfully!</Text>
+            <Text style={styles.completedSubtitle}>
+              "{formSchema.name}" has been saved to your forms.
+            </Text>
+          </View>
+
+          <View style={styles.completedFormPreview}>
+            <Text style={styles.completedSectionTitle}>Form Summary</Text>
+            {formSchema.fields.map(renderCompletedField)}
+          </View>
+
+          <View style={styles.completedButtonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.viewFormsButton]}
+              onPress={() => {
+                setShowCompletedPreview(false);
+                router.replace('/forms');
+              }}
+            >
+              <Ionicons name="list" size={20} color="#fff" />
+              <Text style={styles.viewFormsButtonText}>View All Forms</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, styles.newFormButton]}
+              onPress={() => {
+                setShowCompletedPreview(false);
+                // Reset form data for new entry
+                const initialData: Record<string, any> = {};
+                formSchema.fields.forEach(field => {
+                  initialData[field.id] = field.type === 'checkbox' ? false : '';
+                });
+                setFormData(initialData);
+              }}
+            >
+              <Ionicons name="add-circle" size={20} color="#636ae8" />
+              <Text style={styles.newFormButtonText}>Fill Another Form</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#636ae8" />
         <Text style={styles.loadingText}>Loading form...</Text>
       </View>
+    );
+  }
+
+  // Show completed preview if form was just saved
+  if (showCompletedPreview) {
+    return (
+      <>
+        <Stack.Screen 
+          options={{
+            title: 'Form Completed',
+            headerLargeTitle: false,
+          }}
+        />
+        {renderCompletedPreview()}
+      </>
     );
   }
 
@@ -643,5 +724,100 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     flex: 1,
+  },
+  // Completed form preview styles
+  completedPreviewContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  completedScrollContainer: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  completedHeader: {
+    alignItems: 'center',
+    marginBottom: 32,
+    backgroundColor: 'white',
+    padding: 24,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  completedTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#28a745',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  completedSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  completedFormPreview: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  completedSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: '#636ae8',
+    paddingBottom: 8,
+  },
+  completedFieldContainer: {
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  completedFieldLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 4,
+  },
+  completedFieldValue: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  completedButtonContainer: {
+    gap: 12,
+  },
+  viewFormsButton: {
+    backgroundColor: '#636ae8',
+    flex: 1,
+  },
+  viewFormsButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  newFormButton: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 2,
+    borderColor: '#636ae8',
+    flex: 1,
+  },
+  newFormButtonText: {
+    fontSize: 16,
+    color: '#636ae8',
+    fontWeight: '600',
   },
 });

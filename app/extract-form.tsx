@@ -20,9 +20,9 @@ import {
   extractFormFromDocument, 
   ExtractedForm, 
   ExtractedField, 
-  FilledFormData,
-  saveFilledForm 
+  FilledFormData
 } from '../lib/form-extraction.service';
+import { saveFilledForm } from '../lib/forms.service';
 
 export default function ExtractFormScreen() {
   const router = useRouter();
@@ -177,12 +177,23 @@ export default function ExtractFormScreen() {
     try {
       setIsSaving(true);
       
-      const success = await saveFilledForm(extractedForm, formData, userId);
-      if (success) {
+      const filledForm = await saveFilledForm(
+        extractedForm.id || 'extracted-form',
+        extractedForm.name,
+        formData,
+        true, // completed
+        userId
+      );
+      
+      if (filledForm) {
         Alert.alert(
           'Success', 
           'Form saved successfully!',
           [
+            {
+              text: 'View Forms',
+              onPress: () => router.replace('/forms')
+            },
             {
               text: 'OK',
               onPress: () => router.replace('/documents')
