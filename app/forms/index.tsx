@@ -12,12 +12,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import { supabase } from '../../lib/supabaseClient.ts';
-import { FormSchema, FilledForm, getForms, getFilledForms } from '../../lib/forms.service.ts';
+import { supabase } from '../../lib/supabaseClient';
+import { getForms } from '../../lib/forms.service';
+import { FormSchema } from '../../types/form';
 
 export default function FormsScreen() {
   const [forms, setForms] = useState<FormSchema[]>([]);
-  const [filledForms, setFilledForms] = useState<FilledForm[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
@@ -47,12 +47,8 @@ export default function FormsScreen() {
   const loadForms = async (uid: string) => {
     try {
       setIsLoading(true);
-      const [formsData, filledFormsData] = await Promise.all([
-        getForms(uid),
-        getFilledForms(uid)
-      ]);
+      const formsData = await getForms(uid);
       setForms(formsData);
-      setFilledForms(filledFormsData);
     } catch (error) {
       console.error('Error loading forms:', error);
       Alert.alert('Error', 'Failed to load forms');
@@ -76,8 +72,8 @@ export default function FormsScreen() {
           text: 'Regenerate',
           onPress: async () => {
             try {
-              const { regenerateFormFromDocument } = await import('../../lib/forms.service.ts');
-              const updatedForm = await regenerateFormFromDocument(form.id, userId);
+              const { regenerateFormFromDocument } = await import('../../lib/forms.service');
+              const updatedForm = await regenerateFormFromDocument(form.id, userId ?? undefined);
               if (updatedForm) {
                 Alert.alert('Success', 'Form has been regenerated successfully');
                 loadForms(userId!);
@@ -96,8 +92,8 @@ export default function FormsScreen() {
 
   const handleViewFilledForms = async (form: FormSchema) => {
     try {
-      const { getFilledFormsByFormId } = await import('../../lib/forms.service.ts');
-      const filledFormsForThisForm = await getFilledFormsByFormId(form.id, userId);
+      const { getFilledFormsByFormId } = await import('../../lib/forms.service');
+      const filledFormsForThisForm = await getFilledFormsByFormId(form.id, userId ?? undefined);
       
       if (filledFormsForThisForm.length === 0) {
         Alert.alert('No Filled Forms', 'No completed or draft forms found for this form schema.');
@@ -140,9 +136,6 @@ export default function FormsScreen() {
   };
 
   const renderFormItem = ({ item }: { item: FormSchema }) => {
-    const completedCount = filledForms.filter(f => f.form_id === item.id && f.completed).length;
-    const draftCount = filledForms.filter(f => f.form_id === item.id && !f.completed).length;
-
     return (
       <View style={styles.formItem}>
         <TouchableOpacity
@@ -164,7 +157,7 @@ export default function FormsScreen() {
               {item.description || 'No description'}
             </Text>
             <Text style={styles.formStats}>
-              {item.fields.length} fields • {completedCount} completed • {draftCount} drafts
+              {item.fields.length} fields
             </Text>
           </View>
         </TouchableOpacity>
@@ -203,23 +196,7 @@ export default function FormsScreen() {
     );
   };
 
-  const renderFilledFormItem = ({ item }: { item: FilledForm }) => (
-    <View style={styles.filledFormItem}>
-      <View style={styles.filledFormIcon}>
-        <Ionicons 
-          name={item.completed ? "checkmark-circle" : "document"} 
-          size={24} 
-          color={item.completed ? "#28a745" : "#ffc107"} 
-        />
-      </View>
-      <View style={styles.formInfo}>
-        <Text style={styles.formName}>{item.form_name}</Text>
-        <Text style={styles.formDate}>
-          {item.completed ? 'Completed' : 'Draft'} • {new Date(item.updated_at).toLocaleDateString()}
-        </Text>
-      </View>
-    </View>
-  );
+  
 
   return (
     <>
@@ -248,20 +225,7 @@ export default function FormsScreen() {
           </>
         )}
 
-        {filledForms.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <FlatList
-              data={filledForms.slice(0, 5)}
-              keyExtractor={(item) => item.id}
-              renderItem={renderFilledFormItem}
-              style={styles.section}
-              showsVerticalScrollIndicator={false}
-            />
-          </>
-        )}
-
-        {forms.length === 0 && filledForms.length === 0 && (
+        {forms.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons name="document-outline" size={64} color="#ccc" />
             <Text style={styles.emptyStateText}>No forms yet</Text>
@@ -360,28 +324,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   formStats: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  filledFormItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-  },
-  filledFormIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  formDate: {
     fontSize: 12,
     color: '#999',
     marginTop: 4,

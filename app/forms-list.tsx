@@ -13,12 +13,11 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { supabase } from '../lib/supabaseClient';
-import { getForms, getFilledForms } from '../lib/forms.service';
-import { FormSchema, FilledForm } from '../types/form';
+import { getForms } from '../lib/forms.service';
+import { FormSchema } from '../types/form';
 
 export default function FormsScreen() {
   const [forms, setForms] = useState<FormSchema[]>([]);
-  const [filledForms, setFilledForms] = useState<FilledForm[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
@@ -48,12 +47,8 @@ export default function FormsScreen() {
   const loadForms = async (uid: string) => {
     try {
       setIsLoading(true);
-      const [formsData, filledFormsData] = await Promise.all([
-        getForms(uid),
-        getFilledForms(uid)
-      ]);
+      const formsData = await getForms(uid);
       setForms(formsData);
-      setFilledForms(filledFormsData);
     } catch (error) {
       console.error('Error loading forms:', error);
       Alert.alert('Error', 'Failed to load forms');
@@ -88,9 +83,6 @@ export default function FormsScreen() {
   }
 
   const renderFormItem = ({ item }: { item: FormSchema }) => {
-    const completedCount = filledForms.filter(f => f.form_id === item.id && f.completed).length;
-    const draftCount = filledForms.filter(f => f.form_id === item.id && !f.completed).length;
-
     return (
       <View style={styles.formItem}>
         <TouchableOpacity
@@ -109,7 +101,7 @@ export default function FormsScreen() {
               {item.description || 'No description'}
             </Text>
             <Text style={styles.formStats}>
-              {item.fields.length} fields • {completedCount} completed • {draftCount} drafts
+              {item.fields.length} fields
             </Text>
           </View>
         </TouchableOpacity>
@@ -117,32 +109,6 @@ export default function FormsScreen() {
     );
   };
 
-  const renderFilledFormItem = ({ item }: { item: FilledForm }) => (
-    <TouchableOpacity 
-      style={styles.filledFormItem}
-      onPress={() => {
-        // Navigate to view/edit filled form screen
-        router.push(`/view-filled-form?filledFormId=${item.id}`);
-      }}
-    >
-      <View style={styles.filledFormIcon}>
-        <Ionicons 
-          name={item.completed ? "checkmark-circle" : "document"} 
-          size={24} 
-          color={item.completed ? "#28a745" : "#ffc107"} 
-        />
-      </View>
-      <View style={styles.formInfo}>
-        <Text style={styles.formName}>{item.form_name}</Text>
-        <Text style={styles.formDate}>
-          {item.completed ? 'Completed' : 'Draft'} • {new Date(item.updated_at).toLocaleDateString()}
-        </Text>
-      </View>
-      <View style={styles.chevron}>
-        <Ionicons name="chevron-forward" size={16} color="#999" />
-      </View>
-    </TouchableOpacity>
-  );
 
   return (
     <>
@@ -171,33 +137,8 @@ export default function FormsScreen() {
           </>
         )}
 
-        {filledForms.filter(form => form.completed).length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Recent Activity / Completed Forms</Text>
-            <FlatList
-              data={filledForms.filter(form => form.completed).slice(0, 5)}
-              keyExtractor={(item) => item.id}
-              renderItem={renderFilledFormItem}
-              style={styles.section}
-              showsVerticalScrollIndicator={false}
-            />
-          </>
-        )}
 
-        {filledForms.filter(form => !form.completed).length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Drafts</Text>
-            <FlatList
-              data={filledForms.filter(form => !form.completed).slice(0, 5)}
-              keyExtractor={(item) => item.id}
-              renderItem={renderFilledFormItem}
-              style={styles.section}
-              showsVerticalScrollIndicator={false}
-            />
-          </>
-        )}
-
-        {forms.length === 0 && filledForms.length === 0 && (
+        {forms.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons name="document-outline" size={64} color="#ccc" />
             <Text style={styles.emptyStateText}>No forms yet</Text>
@@ -284,33 +225,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 4,
-  },
-  filledFormItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  filledFormIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  formDate: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  chevron: {
-    marginLeft: 8,
   },
   emptyState: {
     flex: 1,
