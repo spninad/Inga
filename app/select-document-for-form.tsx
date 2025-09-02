@@ -84,11 +84,42 @@ export default function SelectDocumentForFormScreen() {
         throw new Error('Failed to extract form from document');
       }
 
+      // Ask user to customize form name
+      Alert.prompt(
+        'Customize Form Name',
+        'Enter a name for your new form:',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Create Form',
+            onPress: async (customName) => {
+              const finalFormName = customName && customName.trim() ? customName.trim() : extractedForm.name;
+              await createFormFromExtracted(extractedForm, document, finalFormName);
+            }
+          }
+        ],
+        'plain-text',
+        extractedForm.name
+      );
+
+    } catch (error) {
+      console.error('Error processing document:', error);
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to create form from document. Please try again.'
+      );
+      setIsProcessing(false);
+      setProcessingDocId(null);
+    }
+  };
+
+  const createFormFromExtracted = async (extractedForm: any, document: Document, formName: string) => {
+    try {
       // Convert ExtractedForm to FormSchema and save to forms list
       const formSchema = await createForm(
-        extractedForm.name,
+        formName,
         extractedForm.description,
-        extractedForm.fields.map(field => ({
+        extractedForm.fields.map((field: any) => ({
           id: field.id,
           name: field.name,
           type: field.type,
@@ -97,7 +128,8 @@ export default function SelectDocumentForFormScreen() {
           placeholder: field.placeholder,
           options: field.options
         })),
-        userId
+        userId,
+        document.id // Pass document ID to track relationship
       );
 
       if (!formSchema) {
@@ -106,28 +138,17 @@ export default function SelectDocumentForFormScreen() {
 
       Alert.alert(
         'Form Created Successfully!',
-        `Your form "${extractedForm.name}" has been created from the selected document.`,
+        `Your form "${formName}" has been created from the selected document.`,
         [
           {
-            text: 'Fill Manually',
+            text: 'Preview Form',
             onPress: () => {
               router.replace({
                 pathname: '/forms/screens/ManualFormScreen',
                 params: { 
                   formId: formSchema.id,
-                  documentId: document.id
-                }
-              });
-            }
-          },
-          {
-            text: 'Fill with Voice',
-            onPress: () => {
-              router.replace({
-                pathname: '/forms/screens/VoiceChatScreen',
-                params: { 
-                  formId: formSchema.id,
-                  documentId: document.id
+                  documentId: document.id,
+                  preview: 'true'
                 }
               });
             }
@@ -140,7 +161,7 @@ export default function SelectDocumentForFormScreen() {
       );
 
     } catch (error) {
-      console.error('Error processing document:', error);
+      console.error('Error creating form:', error);
       Alert.alert(
         'Error',
         error instanceof Error ? error.message : 'Failed to create form from document. Please try again.'

@@ -14,20 +14,21 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../../lib/supabaseClient.ts';
-import { getFormById } from '../../../lib/forms.service.ts';
-import { saveFilledForm } from '../../../lib/forms.service.ts';
-import { FormSchema, FormField } from '../../../types/form.ts';
+import { supabase } from '../../../lib/supabaseClient';
+import { getFormById } from '../../../lib/forms.service';
+import { saveFilledForm } from '../../../lib/forms.service';
+import { FormSchema, FormField } from '../../../types/form';
 
 export default function ManualFormScreen() {
   const router = useRouter();
-  const { formId, documentId } = useLocalSearchParams<{ formId?: string; documentId?: string }>();
+  const { formId, documentId, preview } = useLocalSearchParams<{ formId?: string; documentId?: string; preview?: string }>();
 
   const [formSchema, setFormSchema] = useState<FormSchema | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   useEffect(() => {
     loadForm();
@@ -62,6 +63,9 @@ export default function ManualFormScreen() {
 
       setFormSchema(form);
 
+      // Check if we're in preview mode (just viewing the form structure)
+      setIsPreviewMode(preview === 'true');
+
       // Initialize form data with empty values
       const initialData: Record<string, any> = {};
       form.fields.forEach(field => {
@@ -82,6 +86,28 @@ export default function ManualFormScreen() {
       ...prevState,
       [fieldId]: value,
     }));
+  };
+
+  const handleClearFields = () => {
+    Alert.alert(
+      'Clear Form Fields',
+      'Are you sure you want to clear all form fields?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => {
+            if (!formSchema) return;
+            const clearedData: Record<string, any> = {};
+            formSchema.fields.forEach(field => {
+              clearedData[field.id] = field.type === 'checkbox' ? false : '';
+            });
+            setFormData(clearedData);
+          }
+        }
+      ]
+    );
   };
 
   const validateForm = (): boolean => {
@@ -259,6 +285,37 @@ export default function ManualFormScreen() {
     }
   };
 
+  const renderPreviewField = (field: FormField) => {
+    return (
+      <View key={field.id} style={styles.previewFieldContainer}>
+        <View style={styles.previewFieldHeader}>
+          <Text style={styles.previewLabel}>
+            {field.label}
+            {field.required && <Text style={styles.required}> *</Text>}
+          </Text>
+          <View style={styles.previewTypeChip}>
+            <Text style={styles.previewTypeText}>
+              {field.type.charAt(0).toUpperCase() + field.type.slice(1)}
+            </Text>
+          </View>
+        </View>
+        {field.placeholder && (
+          <Text style={styles.previewPlaceholder}>
+            {field.placeholder}
+          </Text>
+        )}
+        {field.options && (
+          <View style={styles.previewOptions}>
+            <Text style={styles.previewOptionsLabel}>Options: </Text>
+            <Text style={styles.previewOptionsText}>
+              {field.options.join(', ')}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -272,7 +329,7 @@ export default function ManualFormScreen() {
     <>
       <Stack.Screen 
         options={{
-          title: 'Fill Form',
+          title: isPreviewMode ? 'Form Preview' : 'Fill Form',
           headerLargeTitle: false,
         }}
       />
@@ -286,34 +343,66 @@ export default function ManualFormScreen() {
             {formSchema?.description && (
               <Text style={styles.description}>{formSchema.description}</Text>
             )}
+            {isPreviewMode && (
+              <View style={styles.previewBadge}>
+                <Text style={styles.previewBadgeText}>Preview Mode</Text>
+              </View>
+            )}
           </View>
 
-          {formSchema?.fields.map(renderFormField)}
+          {formSchema?.fields.map(field => 
+            isPreviewMode ? renderPreviewField(field) : renderFormField(field)
+          )}
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={[styles.button, styles.draftButton]}
-              onPress={handleSaveDraft}
+              style={[styles.button, styles.clearButton]}
+              onPress={handleClearFields}
               disabled={isSaving}
             >
-              <Ionicons name="bookmark-outline" size={20} color="#666" />
-              <Text style={styles.draftButtonText}>Save Draft</Text>
+              <Ionicons name="refresh-outline" size={20} color="#666" />
+              <Text style={styles.clearButtonText}>Clear Fields</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.button, styles.saveButton, isSaving && styles.buttonDisabled]}
-              onPress={handleSave}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Ionicons name="checkmark" size={20} color="#fff" />
-              )}
-              <Text style={styles.saveButtonText}>
-                {isSaving ? 'Saving...' : 'Complete Form'}
-              </Text>
-            </TouchableOpacity>
+            {!isPreviewMode && (
+              <>
+                <TouchableOpacity
+                  style={[styles.button, styles.draftButton]}
+                  onPress={handleSaveDraft}
+                  disabled={isSaving}
+                >
+                  <Ionicons name="bookmark-outline" size={20} color="#666" />
+                  <Text style={styles.draftButtonText}>Save Draft</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.button, styles.saveButton, isSaving && styles.buttonDisabled]}
+                  onPress={handleSave}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="checkmark" size={20} color="#fff" />
+                  )}
+                  <Text style={styles.saveButtonText}>
+                    {isSaving ? 'Saving...' : 'Complete Form'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {isPreviewMode && (
+              <TouchableOpacity
+                style={[styles.button, styles.fillButton]}
+                onPress={() => {
+                  setIsPreviewMode(false);
+                }}
+              >
+                <Ionicons name="create-outline" size={20} color="#fff" />
+                <Text style={styles.fillButtonText}>Fill Form</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -342,13 +431,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   description: {
     fontSize: 16,
@@ -433,9 +522,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 32,
     gap: 12,
+    flexWrap: 'wrap',
   },
   button: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -443,11 +532,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     gap: 8,
+    minWidth: 100,
+  },
+  clearButton: {
+    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    flex: 1,
+  },
+  clearButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
   },
   draftButton: {
     backgroundColor: '#f9f9f9',
     borderWidth: 1,
     borderColor: '#ddd',
+    flex: 1,
   },
   draftButtonText: {
     fontSize: 16,
@@ -456,13 +558,90 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: '#636ae8',
+    flex: 1,
   },
   saveButtonText: {
     fontSize: 16,
     color: '#fff',
     fontWeight: '600',
   },
+  fillButton: {
+    backgroundColor: '#28a745',
+    flex: 2,
+  },
+  fillButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
+  },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  previewBadge: {
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  previewBadgeText: {
+    color: '#1976d2',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  previewFieldContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#636ae8',
+  },
+  previewFieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  previewLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  previewTypeChip: {
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  previewTypeText: {
+    fontSize: 12,
+    color: '#1976d2',
+    fontWeight: '500',
+  },
+  previewPlaceholder: {
+    fontSize: 13,
+    color: '#888',
+    fontStyle: 'italic',
+    marginBottom: 4,
+  },
+  previewOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  previewOptionsLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#555',
+    marginRight: 4,
+  },
+  previewOptionsText: {
+    fontSize: 13,
+    color: '#666',
+    flex: 1,
   },
 });

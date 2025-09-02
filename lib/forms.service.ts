@@ -29,7 +29,7 @@ async function setStorageData<T>(key: string, data: T[]): Promise<void> {
 }
 
 // Create a new form schema
-export async function createForm(name: string, description: string, fields: any[], userId?: string): Promise<FormSchema | null> {
+export async function createForm(name: string, description: string, fields: any[], userId?: string, documentId?: string): Promise<FormSchema | null> {
   try {
     const formId = uuidv4();
     const now = new Date().toISOString();
@@ -44,7 +44,8 @@ export async function createForm(name: string, description: string, fields: any[
       })),
       created_at: now,
       updated_at: now,
-      user_id: userId
+      user_id: userId,
+      document_id: documentId
     };
 
     const forms = await getStorageData<FormSchema>(FORMS_STORAGE_KEY);
@@ -199,6 +200,75 @@ export async function updateFilledForm(filledFormId: string, updates: Partial<Fi
     return filledForms[formIndex];
   } catch (error) {
     console.error('Error updating filled form:', error);
+    return null;
+  }
+}
+
+// Get forms created from a specific document
+export async function getFormsByDocumentId(documentId: string, userId?: string): Promise<FormSchema[]> {
+  try {
+    const forms = await getStorageData<FormSchema>(FORMS_STORAGE_KEY);
+    let filtered = forms.filter(form => form.document_id === documentId);
+    return userId ? filtered.filter(form => form.user_id === userId) : filtered;
+  } catch (error) {
+    console.error('Error getting forms by document ID:', error);
+    return [];
+  }
+}
+
+// Check if a document has any existing forms
+export async function hasExistingForms(documentId: string, userId?: string): Promise<boolean> {
+  try {
+    const forms = await getFormsByDocumentId(documentId, userId);
+    return forms.length > 0;
+  } catch (error) {
+    console.error('Error checking existing forms:', error);
+    return false;
+  }
+}
+
+// Regenerate a form from its source document
+export async function regenerateFormFromDocument(formId: string, userId?: string): Promise<FormSchema | null> {
+  try {
+    const form = await getFormById(formId);
+    if (!form || !form.document_id) {
+      throw new Error('Form not found or not created from a document');
+    }
+    
+    // Import document service to get the source document
+    const { getDocumentById } = await import('./documents.service.ts');
+    const { extractFormFromDocument } = await import('./form-extraction.service.ts');
+    
+    // Get the source document
+    const document = await getDocumentById(form.document_id, userId);
+    if (!document) {
+      throw new Error('Source document not found');
+    }
+    
+    // Re-extract form from the document
+    const extractedForm = await extractFormFromDocument(document);
+    if (!extractedForm) {
+      throw new Error('Failed to extract form from document');
+    }
+    
+    // Update the existing form with new fields while preserving name and ID
+    const updatedForm = await updateForm(formId, {
+      fields: extractedForm.fields.map(field => ({
+        id: field.id,
+        name: field.name,
+        type: field.type,
+        label: field.label,
+        required: field.required || false,
+        placeholder: field.placeholder,
+        options: field.options
+      })),
+      description: extractedForm.description,
+      updated_at: new Date().toISOString()
+    });
+    
+    return updatedForm;
+  } catch (error) {
+    console.error('Error regenerating form:', error);
     return null;
   }
 }

@@ -115,7 +115,7 @@ export default function DocumentsScreen() {
     }
   };
 
-  const handleExtractFormFromDocument = (document: Document) => {
+  const handleExtractFormFromDocument = async (document: Document) => {
     if (!userId) {
       Alert.alert('Authentication Required', 'Please sign in to extract forms');
       return;
@@ -126,10 +126,49 @@ export default function DocumentsScreen() {
       return;
     }
     
-    router.push({
-      pathname: '/extract-form',
-      params: { documentId: document.id }
-    });
+    // Import the forms service functions we need
+    const { hasExistingForms, getFormsByDocumentId } = await import('../lib/forms.service.ts');
+    
+    // Check if forms already exist for this document
+    const existingFormsExist = await hasExistingForms(document.id, userId);
+    
+    if (existingFormsExist) {
+      const existingForms = await getFormsByDocumentId(document.id, userId);
+      Alert.alert(
+        'Existing Forms Found',
+        `This document already has ${existingForms.length} form(s) created from it. What would you like to do?`,
+        [
+          {
+            text: 'View Existing Forms',
+            onPress: () => {
+              router.push({
+                pathname: '/forms/screens/ManualFormScreen',
+                params: { 
+                  formId: existingForms[0].id,
+                  documentId: document.id,
+                  preview: 'true'
+                }
+              });
+            }
+          },
+          {
+            text: 'Create New Form',
+            onPress: () => {
+              router.push({
+                pathname: '/extract-form',
+                params: { documentId: document.id }
+              });
+            }
+          },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+    } else {
+      router.push({
+        pathname: '/extract-form',
+        params: { documentId: document.id }
+      });
+    }
   };
 
   const handleDeleteDocument = async (document: Document) => {
