@@ -136,27 +136,9 @@ export default function ChatScreen() {
           if (document && document.name) {
             chatTitle = document.name; // Use the document's name as the chat title
           }
+          chatDocumentId = params.documentId;
         }
-        else{
-          chatDocumentId = uuidv4();
-
-          console.log("id: ", chatDocumentId);
-
-          const { data: newDoc, error: docError } = await supabase
-            .from('documents')
-            .insert([{ user_id: currentUserId, id: chatDocumentId, name: chatTitle, created_at: isoNow,
-            updated_at: isoNow, }])
-            .select()
-            .single();
-
-          if (docError || !newDoc) {
-            console.error('Error creating new document:', docError);
-            setIsLoading(false);
-            return;
-          }
-
-          params.documentId = chatDocumentId;
-        }
+        // For general chats, we don't create a document - chatDocumentId remains null
 
         // Create chat
         const { data: chat, error: chatError } = await supabase
@@ -172,10 +154,13 @@ export default function ChatScreen() {
         }
 
         // Add intro message with language selection
+        const introContent = chatDocumentId 
+          ? "👋 I am your AI assistant. Please select your preferred language to continue our conversation about your document."
+          : "👋 I am your AI assistant. Please select your preferred language to continue our conversation.";
         const introMessage = {
           chat_id: chat.id,
           user_id: currentUserId,
-          content: "👋 I am your AI assistant. Please select your preferred language to continue our conversation about your document.",
+          content: introContent,
           role: 'assistant'
         };
         await supabase.from('messages').insert([introMessage]);
