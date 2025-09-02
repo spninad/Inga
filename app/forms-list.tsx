@@ -12,8 +12,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import { supabase } from '../lib/supabaseClient.ts';
-import { FormSchema, FilledForm, getForms, getFilledForms } from '../lib/forms.service.ts';
+import { supabase } from '../lib/supabaseClient';
+import { getForms, getFilledForms } from '../lib/forms.service';
+import { FormSchema, FilledForm } from '../types/form';
 
 export default function FormsScreen() {
   const [forms, setForms] = useState<FormSchema[]>([]);
@@ -95,8 +96,8 @@ export default function FormsScreen() {
         <TouchableOpacity
           style={styles.formPreview}
           onPress={() => {
-            // Navigate to form details/edit screen
-            Alert.alert('Form Details', `${item.name}\n\n${item.description || 'No description'}`);
+            // Navigate to fill form screen for this template
+            router.push(`/fill-form-template?formId=${item.id}`);
           }}
         >
           <View style={styles.formIcon}>
@@ -117,7 +118,13 @@ export default function FormsScreen() {
   };
 
   const renderFilledFormItem = ({ item }: { item: FilledForm }) => (
-    <View style={styles.filledFormItem}>
+    <TouchableOpacity 
+      style={styles.filledFormItem}
+      onPress={() => {
+        // Navigate to view/edit filled form screen
+        router.push(`/view-filled-form?filledFormId=${item.id}`);
+      }}
+    >
       <View style={styles.filledFormIcon}>
         <Ionicons 
           name={item.completed ? "checkmark-circle" : "document"} 
@@ -131,7 +138,10 @@ export default function FormsScreen() {
           {item.completed ? 'Completed' : 'Draft'} • {new Date(item.updated_at).toLocaleDateString()}
         </Text>
       </View>
-    </View>
+      <View style={styles.chevron}>
+        <Ionicons name="chevron-forward" size={16} color="#999" />
+      </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -161,11 +171,24 @@ export default function FormsScreen() {
           </>
         )}
 
-        {filledForms.length > 0 && (
+        {filledForms.filter(form => form.completed).length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            <Text style={styles.sectionTitle}>Recent Activity / Completed Forms</Text>
             <FlatList
-              data={filledForms.slice(0, 5)}
+              data={filledForms.filter(form => form.completed).slice(0, 5)}
+              keyExtractor={(item) => item.id}
+              renderItem={renderFilledFormItem}
+              style={styles.section}
+              showsVerticalScrollIndicator={false}
+            />
+          </>
+        )}
+
+        {filledForms.filter(form => !form.completed).length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Drafts</Text>
+            <FlatList
+              data={filledForms.filter(form => !form.completed).slice(0, 5)}
               keyExtractor={(item) => item.id}
               renderItem={renderFilledFormItem}
               style={styles.section}
@@ -269,6 +292,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   filledFormIcon: {
     width: 40,
@@ -283,6 +308,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 4,
+  },
+  chevron: {
+    marginLeft: 8,
   },
   emptyState: {
     flex: 1,

@@ -172,11 +172,33 @@ export async function getFilledForms(userId?: string): Promise<FilledForm[]> {
 export async function getFilledFormsByFormId(formId: string, userId?: string): Promise<FilledForm[]> {
   try {
     const filledForms = await getStorageData<FilledForm>(FILLED_FORMS_STORAGE_KEY);
-    let filtered = filledForms.filter(form => form.form_id === formId);
+    const filtered = filledForms.filter(form => form.form_id === formId);
     return userId ? filtered.filter(form => form.user_id === userId) : filtered;
   } catch (error) {
     console.error('Error getting filled forms by form ID:', error);
     return [];
+  }
+}
+
+// Get a specific filled form by ID
+export async function getFilledFormById(filledFormId: string, userId?: string): Promise<FilledForm | null> {
+  try {
+    const filledForms = await getStorageData<FilledForm>(FILLED_FORMS_STORAGE_KEY);
+    const filledForm = filledForms.find(form => form.id === filledFormId);
+    
+    if (!filledForm) {
+      return null;
+    }
+    
+    // Check user authorization if userId provided
+    if (userId && filledForm.user_id !== userId) {
+      return null;
+    }
+    
+    return filledForm;
+  } catch (error) {
+    console.error('Error getting filled form by ID:', error);
+    return null;
   }
 }
 

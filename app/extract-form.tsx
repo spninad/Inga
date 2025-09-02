@@ -22,7 +22,8 @@ import {
   ExtractedField, 
   FilledFormData
 } from '../lib/form-extraction.service';
-import { saveFilledForm } from '../lib/forms.service';
+import { saveFilledForm, createForm } from '../lib/forms.service';
+import { FormSchema } from '../types/form';
 
 export default function ExtractFormScreen() {
   const router = useRouter();
@@ -177,9 +178,24 @@ export default function ExtractFormScreen() {
     try {
       setIsSaving(true);
       
-      const filledForm = await saveFilledForm(
-        extractedForm.id || 'extracted-form',
+      // First, create and save the form template so it appears in "Your Forms"
+      const formTemplate = await createForm(
         extractedForm.name,
+        extractedForm.description,
+        extractedForm.fields,
+        userId,
+        documentId
+      );
+      
+      if (!formTemplate) {
+        Alert.alert('Error', 'Failed to save form template. Please try again.');
+        return;
+      }
+      
+      // Then save the filled form data with correct form_id reference
+      const filledForm = await saveFilledForm(
+        formTemplate.id, // Use the template ID for proper linking
+        formTemplate.name,
         formData,
         true, // completed
         userId
@@ -188,11 +204,11 @@ export default function ExtractFormScreen() {
       if (filledForm) {
         Alert.alert(
           'Success', 
-          'Form saved successfully!',
+          'Form template and completed form saved successfully!',
           [
             {
               text: 'View Forms',
-              onPress: () => router.replace('/forms')
+              onPress: () => router.replace('/forms-list')
             },
             {
               text: 'OK',
@@ -201,7 +217,7 @@ export default function ExtractFormScreen() {
           ]
         );
       } else {
-        Alert.alert('Error', 'Failed to save form. Please try again.');
+        Alert.alert('Error', 'Failed to save completed form. Please try again.');
       }
     } catch (error) {
       console.error('Error saving form:', error);
