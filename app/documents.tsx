@@ -10,6 +10,12 @@ import { supabase } from '../lib/supabaseClient.ts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RealtimePostgresInsertPayload } from '@supabase/supabase-js'; // Import the type from Supabase
 import { Stack } from 'expo-router';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { Colors } from '@/constants/Colors';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedButton } from '@/components/ThemedButton';
+import { ThemedCard } from '@/components/ThemedCard';
 
 export default function DocumentsScreen() {
   // Add Stack.Screen component for this screen's title
@@ -17,6 +23,8 @@ export default function DocumentsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
   // Remove useEffect that calls getUserAndLoadDocuments to avoid double fetch
   // Replace useEffect with useFocusEffect to refresh on navigation
@@ -209,21 +217,21 @@ export default function DocumentsScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#636ae8" />
-      </View>
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </ThemedView>
     );
   }
 
   if (!userId) {
     return (
-      <View style={styles.authRequiredContainer}>
-        <Ionicons name="lock-closed" size={64} color="#ccc" />
-        <Text style={styles.authRequiredText}>Authentication Required</Text>
-        <Text style={styles.authRequiredSubText}>
+      <ThemedView style={styles.authRequiredContainer}>
+        <Ionicons name="lock-closed" size={64} color={colors.textTertiary} />
+        <ThemedText style={styles.authRequiredText}>Authentication Required</ThemedText>
+        <ThemedText style={styles.authRequiredSubText}>
           Please sign in to view and manage your documents
-        </Text>
-      </View>
+        </ThemedText>
+      </ThemedView>
     );
   }
 
@@ -235,47 +243,48 @@ export default function DocumentsScreen() {
           headerLargeTitle: true,
         }}
       />
-    <View style={styles.container}>
+    <ThemedView style={styles.container}>
 
-      <TouchableOpacity style={styles.addButton} onPress={handleAddDocument}>
-        <Ionicons name="add-circle" size={24} color="white" />
-        <Text style={styles.addButtonText}>Add Document</Text>
-      </TouchableOpacity>
+      <ThemedButton
+        title="Add Document"
+        onPress={handleAddDocument}
+        style={styles.addButton}
+      />
 
       {documents.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="document-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyStateText}>No documents yet</Text>
-          <Text style={styles.emptyStateSubText}>
+        <ThemedView style={styles.emptyState}>
+          <Ionicons name="document-outline" size={64} color={colors.textTertiary} />
+          <ThemedText style={styles.emptyStateText}>No documents yet</ThemedText>
+          <ThemedText style={styles.emptyStateSubText}>
             Add your first document to get started
-          </Text>
-        </View>
+          </ThemedText>
+        </ThemedView>
       ) : (
         <FlatList
           data={documents}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.documentItem}>
+            <ThemedCard style={styles.documentItem}>
               <TouchableOpacity
                 style={styles.documentPreview}
                 onPress={() => router.push(`/document/${item.id}`)}
               >
                 {item.images && item.images.length > 0 ? (
-                  <View style={styles.thumbnailContainer}>
-                    <Text style={styles.imageCount}>
+                  <View style={[styles.thumbnailContainer, { backgroundColor: colors.primary + '20' }]}>
+                    <ThemedText style={[styles.imageCount, { color: colors.primary }]}>
                       {item.images.length} {item.images.length === 1 ? 'image' : 'images'}
-                    </Text>
+                    </ThemedText>
                   </View>
                 ) : (
-                  <View style={styles.noThumbnail}>
-                    <Ionicons name="document" size={32} color="#ccc" />
+                  <View style={[styles.noThumbnail, { backgroundColor: colors.backgroundSecondary }]}>
+                    <Ionicons name="document" size={32} color={colors.textTertiary} />
                   </View>
                 )}
                 <View style={styles.documentInfo}>
-                  <Text style={styles.documentName}>{item.name}</Text>
-                  <Text style={styles.documentDate}>
+                  <ThemedText style={styles.documentName}>{item.name}</ThemedText>
+                  <ThemedText style={styles.documentDate}>
                     {new Date(item.created_at).toLocaleDateString()}
-                  </Text>
+                  </ThemedText>
                 </View>
               </TouchableOpacity>
               
@@ -284,30 +293,30 @@ export default function DocumentsScreen() {
                   style={styles.actionButton}
                   onPress={() => handleChatWithDocument(item)}
                 >
-                  <Ionicons name="chatbubble" size={22} color="#636ae8" />
+                  <Ionicons name="chatbubble" size={22} color={colors.primary} />
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
                   style={styles.actionButton}
                   onPress={() => handleExtractFormFromDocument(item)}
                 >
-                  <Ionicons name="document-text" size={22} color="#28a745" />
+                  <Ionicons name="document-text" size={22} color={colors.accent} />
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
                   style={styles.actionButton}
                   onPress={() => handleDeleteDocument(item)}
                 >
-                  <Ionicons name="trash-outline" size={22} color="#ff6b6b" />
+                  <Ionicons name="trash-outline" size={22} color={colors.danger} />
                 </TouchableOpacity>
               </View>
-            </View>
+            </ThemedCard>
           )}
           contentContainerStyle={styles.documentsList}
           showsVerticalScrollIndicator={false}
         />
       )}
-    </View>
+    </ThemedView>
     </>
   );
 }
@@ -315,35 +324,20 @@ export default function DocumentsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     padding: 20,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#333',
   },
   addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#636ae8',
-    borderRadius: 8,
-    padding: 12,
     marginBottom: 20,
-  },
-  addButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
   },
   documentsList: {
     paddingBottom: 20,
@@ -351,8 +345,6 @@ const styles = StyleSheet.create({
   documentItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
     padding: 12,
     marginBottom: 10,
   },
@@ -365,7 +357,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 6,
-    backgroundColor: 'rgba(99, 106, 232, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -374,14 +365,12 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 6,
-    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   imageCount: {
     fontSize: 12,
-    color: '#636ae8',
     fontWeight: '500',
   },
   documentInfo: {
@@ -390,11 +379,9 @@ const styles = StyleSheet.create({
   documentName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
   },
   documentDate: {
     fontSize: 12,
-    color: '#999',
     marginTop: 4,
   },
   documentActions: {
@@ -417,12 +404,10 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#333',
     marginTop: 16,
   },
   emptyStateSubText: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     marginTop: 8,
     maxWidth: '80%',
@@ -436,12 +421,10 @@ const styles = StyleSheet.create({
   authRequiredText: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#333',
     marginTop: 16,
   },
   authRequiredSubText: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     marginTop: 8,
     maxWidth: '80%',

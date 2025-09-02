@@ -5,10 +5,15 @@ import { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import DocumentsScreen from './documents.tsx';
 import FormsScreen from './forms/index.tsx';
 import ChatsScreen from './chats.tsx';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { Colors } from '@/constants/Colors';
 
 const Tab = createBottomTabNavigator();
 
 export default function App() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   return (
     <Tab.Navigator
       screenOptions={({ route }: { route: { name: string } }): BottomTabNavigationOptions => ({
@@ -18,21 +23,26 @@ export default function App() {
         headerLargeTitleStyle: {
           fontSize: 34,
           fontWeight: '700',
+          color: colors.headerText,
         },
         // Improve iOS title appearance
         headerLargeTitleShadowVisible: false,
         headerTransparent: false,
         headerStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: colors.headerBackground,
         },
         headerTitleStyle: {
           fontWeight: '600',
+          color: colors.headerText,
         },
-        headerTintColor: '#333333',
+        headerTintColor: colors.headerTint,
         // Tab bar styling
-        tabBarActiveTintColor: '#636ae8',
-        tabBarInactiveTintColor: 'gray',
-        tabBarStyle: { backgroundColor: '#FFFFFF' },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarStyle: { 
+          backgroundColor: colors.headerBackground,
+          borderTopColor: colors.border,
+        },
         tabBarIcon: ({ color, size }: { color: string; size: number }) => {
           let iconName: keyof typeof Ionicons.glyphMap | undefined;
 
