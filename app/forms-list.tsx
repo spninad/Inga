@@ -15,12 +15,20 @@ import { Stack } from 'expo-router';
 import { supabase } from '../lib/supabaseClient';
 import { getForms } from '../lib/forms.service';
 import { FormSchema } from '../types/form';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { Colors } from '@/constants/Colors';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedButton } from '@/components/ThemedButton';
+import { ThemedCard } from '@/components/ThemedCard';
 
 export default function FormsScreen() {
   const [forms, setForms] = useState<FormSchema[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
   useFocusEffect(
     useCallback(() => {
@@ -64,27 +72,27 @@ export default function FormsScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#636ae8" />
-      </View>
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </ThemedView>
     );
   }
 
   if (!userId) {
     return (
-      <View style={styles.authRequiredContainer}>
-        <Ionicons name="lock-closed" size={64} color="#ccc" />
-        <Text style={styles.authRequiredText}>Authentication Required</Text>
-        <Text style={styles.authRequiredSubText}>
+      <ThemedView style={styles.authRequiredContainer}>
+        <Ionicons name="lock-closed" size={64} color={colors.textTertiary} />
+        <ThemedText style={styles.authRequiredText}>Authentication Required</ThemedText>
+        <ThemedText style={styles.authRequiredSubText}>
           Please sign in to view and manage your forms
-        </Text>
-      </View>
+        </ThemedText>
+      </ThemedView>
     );
   }
 
   const renderFormItem = ({ item }: { item: FormSchema }) => {
     return (
-      <View style={styles.formItem}>
+      <ThemedCard style={styles.formItem}>
         <TouchableOpacity
           style={styles.formPreview}
           onPress={() => {
@@ -92,20 +100,20 @@ export default function FormsScreen() {
             router.push(`/fill-form-template?formId=${item.id}`);
           }}
         >
-          <View style={styles.formIcon}>
-            <Ionicons name="document-text" size={32} color="#636ae8" />
+          <View style={[styles.formIcon, { backgroundColor: colors.primary + '20' }]}>
+            <Ionicons name="document-text" size={32} color={colors.primary} />
           </View>
           <View style={styles.formInfo}>
-            <Text style={styles.formName}>{item.name}</Text>
-            <Text style={styles.formDescription}>
+            <ThemedText style={styles.formName}>{item.name}</ThemedText>
+            <ThemedText style={styles.formDescription}>
               {item.description || 'No description'}
-            </Text>
-            <Text style={styles.formStats}>
+            </ThemedText>
+            <ThemedText style={styles.formStats}>
               {item.fields.length} fields
-            </Text>
+            </ThemedText>
           </View>
         </TouchableOpacity>
-      </View>
+      </ThemedCard>
     );
   };
 
@@ -118,15 +126,16 @@ export default function FormsScreen() {
           headerLargeTitle: true,
         }}
       />
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.createButton} onPress={handleCreateForm}>
-          <Ionicons name="add-circle" size={24} color="white" />
-          <Text style={styles.createButtonText}>Create Form</Text>
-        </TouchableOpacity>
+      <ThemedView style={styles.container}>
+        <ThemedButton
+          title="Create Form"
+          onPress={handleCreateForm}
+          style={styles.createButton}
+        />
 
         {forms.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Your Forms</Text>
+            <ThemedText style={styles.sectionTitle}>Your Forms</ThemedText>
             <FlatList
               data={forms}
               keyExtractor={(item) => item.id}
@@ -139,15 +148,15 @@ export default function FormsScreen() {
 
 
         {forms.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="document-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyStateText}>No forms yet</Text>
-            <Text style={styles.emptyStateSubText}>
+          <ThemedView style={styles.emptyState}>
+            <Ionicons name="document-outline" size={64} color={colors.textTertiary} />
+            <ThemedText style={styles.emptyStateText}>No forms yet</ThemedText>
+            <ThemedText style={styles.emptyStateSubText}>
               Create your first form or fill forms using documents
-            </Text>
-          </View>
+            </ThemedText>
+          </ThemedView>
         )}
-      </View>
+      </ThemedView>
     </>
   );
 }
@@ -155,34 +164,19 @@ export default function FormsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     padding: 16,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
   createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#636ae8',
-    borderRadius: 8,
-    padding: 12,
     marginBottom: 20,
-  },
-  createButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 12,
     marginTop: 16,
   },
@@ -190,8 +184,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   formItem: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
     padding: 12,
     marginBottom: 10,
   },
@@ -203,7 +195,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 6,
-    backgroundColor: 'rgba(99, 106, 232, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -214,16 +205,13 @@ const styles = StyleSheet.create({
   formName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
   },
   formDescription: {
     fontSize: 14,
-    color: '#666',
     marginTop: 4,
   },
   formStats: {
     fontSize: 12,
-    color: '#999',
     marginTop: 4,
   },
   emptyState: {
@@ -235,12 +223,10 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#333',
     marginTop: 16,
   },
   emptyStateSubText: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     marginTop: 8,
     maxWidth: '80%',
@@ -254,12 +240,10 @@ const styles = StyleSheet.create({
   authRequiredText: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#333',
     marginTop: 16,
   },
   authRequiredSubText: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     marginTop: 8,
     maxWidth: '80%',

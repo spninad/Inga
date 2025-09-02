@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { ThemedTextInput } from '@/components/ThemedTextInput';
+import { ThemedButton } from '@/components/ThemedButton';
 import { supabase } from '@/lib/supabaseClient';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
@@ -14,6 +16,7 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<AuthMode>('login');
   const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
   
   const handleAuth = async () => {
     setLoading(true);
@@ -80,16 +83,9 @@ export default function AuthScreen() {
           </View>
 
           <View style={styles.formContainer}>
-            <TextInput
-              style={[
-                styles.input,
-                { 
-                  backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#F2F2F7',
-                  color: colorScheme === 'dark' ? '#FFFFFF' : '#000000'
-                }
-              ]}
+            <ThemedTextInput
+              style={styles.input}
               placeholder="Email"
-              placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#8E8E93'}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -97,42 +93,28 @@ export default function AuthScreen() {
             />
             
             {mode !== 'forgotPassword' && (
-              <TextInput
-                style={[
-                  styles.input,
-                  { 
-                    backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#F2F2F7',
-                    color: colorScheme === 'dark' ? '#FFFFFF' : '#000000'
-                  }
-                ]}
+              <ThemedTextInput
+                style={styles.input}
                 placeholder="Password"
-                placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#8E8E93'}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
               />
             )}
 
-            <TouchableOpacity
-              style={[styles.button, { opacity: loading ? 0.7 : 1 }]}
+            <ThemedButton
+              title={mode === 'login' ? 'Sign In' : mode === 'register' ? 'Sign Up' : 'Send Reset Link'}
               onPress={handleAuth}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <ThemedText style={styles.buttonText}>
-                  {mode === 'login' ? 'Sign In' : mode === 'register' ? 'Sign Up' : 'Send Reset Link'}
-                </ThemedText>
-              )}
-            </TouchableOpacity>
+              loading={loading}
+              style={styles.button}
+            />
             
             {mode === 'login' && (
               <TouchableOpacity 
                 style={styles.linkButton}
                 onPress={() => setMode('forgotPassword')}
               >
-                <ThemedText style={styles.linkText}>Forgot Password?</ThemedText>
+                <ThemedText type="link" style={styles.linkText}>Forgot Password?</ThemedText>
               </TouchableOpacity>
             )}
 
@@ -190,24 +172,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   input: {
-    borderRadius: 8,
-    height: 50,
     marginBottom: 16,
-    paddingHorizontal: 16,
-    fontSize: 16,
   },
   button: {
-    height: 50,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#5B87FF',
     marginTop: 16,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
   linkButton: {
     alignSelf: 'flex-end',

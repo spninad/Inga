@@ -5,6 +5,11 @@ import { useRouter, Stack } from 'expo-router';
 import { startDocumentChat } from '../lib/chat.service.ts';
 import { supabase } from '../lib/supabaseClient.ts';
 import { useFocusEffect } from '@react-navigation/native';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { Colors } from '@/constants/Colors';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedCard } from '@/components/ThemedCard';
 
 // Interface for Chat type
 interface Chat {
@@ -20,6 +25,8 @@ export default function ChatsScreen() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
   useFocusEffect(
     useCallback(() => {
@@ -133,22 +140,22 @@ export default function ChatsScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#636ae8" />
-      </View>
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </ThemedView>
     );
   }
 
   // Display authentication required message if not logged in
   if (!userId) {
     return (
-      <View style={styles.authRequiredContainer}>
-        <Ionicons name="lock-closed" size={64} color="#ccc" />
-        <Text style={styles.authRequiredText}>Authentication Required</Text>
-        <Text style={styles.authRequiredSubText}>
+      <ThemedView style={styles.authRequiredContainer}>
+        <Ionicons name="lock-closed" size={64} color={colors.textTertiary} />
+        <ThemedText style={styles.authRequiredText}>Authentication Required</ThemedText>
+        <ThemedText style={styles.authRequiredSubText}>
           Please sign in to view and manage your chats
-        </Text>
-      </View>
+        </ThemedText>
+      </ThemedView>
     );
   }
 
@@ -161,54 +168,56 @@ export default function ChatsScreen() {
         }}
       />
       
-      <View style={styles.container}>
+      <ThemedView style={styles.container}>
         {/* Remove the title text since it will be in the header */}
         
-        <TouchableOpacity style={styles.newChatButton} onPress={handleNewChat}>
+        <TouchableOpacity style={[styles.newChatButton, { backgroundColor: colors.primary }]} onPress={handleNewChat}>
           <Ionicons name="add-circle" size={24} color="white" />
-          <Text style={styles.newChatButtonText}>New Chat</Text>
+          <ThemedText style={styles.newChatButtonText}>New Chat</ThemedText>
         </TouchableOpacity>
         
         {chats.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="chatbubble-ellipses-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyStateText}>No chats yet</Text>
-            <Text style={styles.emptyStateSubText}>
+          <ThemedView style={styles.emptyState}>
+            <Ionicons name="chatbubble-ellipses-outline" size={64} color={colors.textTertiary} />
+            <ThemedText style={styles.emptyStateText}>No chats yet</ThemedText>
+            <ThemedText style={styles.emptyStateSubText}>
               Start a new chat or create one from a document
-            </Text>
-          </View>
+            </ThemedText>
+          </ThemedView>
         ) : (
           <FlatList
             data={chats}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.chatItem}
-                onPress={() => {
-                  console.log("Pressed chat:", item.id);
-                  handleChatPress(item.id, item.documentId || "");}}
-              >
-                <View style={styles.chatIcon}>
-                  <Ionicons 
-                    name={item.documentId ? "document-text" : "chatbubble-ellipses"} 
-                    size={24} 
-                    color="#636ae8" 
-                  />
-                </View>
-                <View style={styles.chatInfo}>
-                  <Text style={styles.chatTitle}>{item.title}</Text>
-                  <Text style={styles.chatTimestamp}>
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#ccc" />
-              </TouchableOpacity>
+              <ThemedCard style={styles.chatItem}>
+                <TouchableOpacity
+                  style={styles.chatContent}
+                  onPress={() => {
+                    console.log("Pressed chat:", item.id);
+                    handleChatPress(item.id, item.documentId || "");}}
+                >
+                  <View style={[styles.chatIcon, { backgroundColor: colors.primary + '20' }]}>
+                    <Ionicons 
+                      name={item.documentId ? "document-text" : "chatbubble-ellipses"} 
+                      size={32} 
+                      color={colors.primary} 
+                    />
+                  </View>
+                  <View style={styles.chatInfo}>
+                    <ThemedText style={styles.chatTitle}>{item.title}</ThemedText>
+                    <ThemedText style={styles.chatTimestamp}>
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </ThemedText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </ThemedCard>
             )}
             contentContainerStyle={styles.chatsList}
             showsVerticalScrollIndicator={false}
           />
         )}
-      </View>
+      </ThemedView>
     </>
   );
 }
@@ -216,26 +225,22 @@ export default function ChatsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     padding: 16,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#333',
   },
   newChatButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#636ae8',
     borderRadius: 8,
     padding: 12,
     marginBottom: 20,
@@ -250,18 +255,17 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   chatItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 16,
     marginBottom: 10,
   },
+  chatContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
   chatIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(99, 106, 232, 0.1)',
+    width: 50,
+    height: 50,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -272,11 +276,9 @@ const styles = StyleSheet.create({
   chatTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
   },
   chatTimestamp: {
     fontSize: 12,
-    color: '#999',
     marginTop: 4,
   },
   emptyState: {
@@ -288,12 +290,10 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#333',
     marginTop: 16,
   },
   emptyStateSubText: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     marginTop: 8,
     maxWidth: '80%',
@@ -307,12 +307,10 @@ const styles = StyleSheet.create({
   authRequiredText: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#333',
     marginTop: 16,
   },
   authRequiredSubText: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     marginTop: 8,
     maxWidth: '80%',
