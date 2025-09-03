@@ -18,10 +18,18 @@ import { supabase } from '../../../lib/supabaseClient';
 import { getFormById } from '../../../lib/forms.service';
 import { saveFilledForm } from '../../../lib/forms.service';
 import { FormSchema, FormField } from '../../../types/form';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { Colors } from '@/constants/Colors';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedTextInput } from '@/components/ThemedTextInput';
+import { ThemedButton } from '@/components/ThemedButton';
 
 export default function ManualFormScreen() {
   const router = useRouter();
   const { formId, documentId, preview } = useLocalSearchParams<{ formId?: string; documentId?: string; preview?: string }>();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
   const [formSchema, setFormSchema] = useState<FormSchema | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});

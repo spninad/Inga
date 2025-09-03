@@ -16,10 +16,21 @@ import { supabase } from '@/lib/supabaseClient.ts';
 import { createDocument } from '@/lib/documents.service.ts';
 import { extractFormFromDocument } from '@/lib/form-extraction.service.ts';
 import { createForm } from '@/lib/forms.service.ts';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function CreateFormScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const router = useRouter();
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const borderColor = useThemeColor({}, 'border');
+  const primaryColor = useThemeColor({}, 'primary');
+  const cardColor = useThemeColor({}, 'card');
+  const textSecondary = useThemeColor({}, 'textSecondary');
 
   const requestPermissions = async () => {
     const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
@@ -183,13 +194,13 @@ export default function CreateFormScreen() {
 
   if (isProcessing) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#636ae8" />
-        <Text style={styles.loadingText}>Processing your form...</Text>
-        <Text style={styles.loadingSubText}>
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={primaryColor} />
+        <ThemedText style={styles.loadingText}>Processing your form...</ThemedText>
+        <ThemedText style={[styles.loadingSubText, { color: textSecondary }]}>
           We're using AI to extract form fields from your images
-        </Text>
-      </View>
+        </ThemedText>
+      </ThemedView>
     );
   }
 
@@ -203,53 +214,53 @@ export default function CreateFormScreen() {
       />
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         <View style={styles.header}>
-          <Ionicons name="document-text-outline" size={64} color="#636ae8" />
-          <Text style={styles.title}>Create a Digital Form</Text>
-          <Text style={styles.subtitle}>
+          <Ionicons name="document-text-outline" size={64} color={primaryColor} />
+          <ThemedText style={styles.title}>Create a Digital Form</ThemedText>
+          <ThemedText style={[styles.subtitle, { color: textSecondary }]}>
             Turn paper forms into digital forms that can be filled out manually or with voice assistance
-          </Text>
+          </ThemedText>
         </View>
 
         <View style={styles.optionsContainer}>
-          <TouchableOpacity style={styles.optionCard} onPress={handleTakePhoto}>
-            <View style={styles.optionIcon}>
-              <Ionicons name="camera" size={32} color="#636ae8" />
+          <TouchableOpacity style={[styles.optionCard, { backgroundColor: cardColor, borderColor }]} onPress={handleTakePhoto}>
+            <View style={[styles.optionIcon, { backgroundColor: `${primaryColor}1A` }]}>
+              <Ionicons name="camera" size={32} color={primaryColor} />
             </View>
-            <Text style={styles.optionTitle}>Take Photo</Text>
-            <Text style={styles.optionDescription}>
+            <ThemedText style={styles.optionTitle}>Take Photo</ThemedText>
+            <ThemedText style={[styles.optionDescription, { color: textSecondary }]}>
               Capture a form document with your camera
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.optionCard} onPress={handleSelectFromLibrary}>
-            <View style={styles.optionIcon}>
-              <Ionicons name="images" size={32} color="#636ae8" />
+          <TouchableOpacity style={[styles.optionCard, { backgroundColor: cardColor, borderColor }]} onPress={handleSelectFromLibrary}>
+            <View style={[styles.optionIcon, { backgroundColor: `${primaryColor}1A` }]}>
+              <Ionicons name="images" size={32} color={primaryColor} />
             </View>
-            <Text style={styles.optionTitle}>Choose from Photos</Text>
-            <Text style={styles.optionDescription}>
+            <ThemedText style={styles.optionTitle}>Choose from Photos</ThemedText>
+            <ThemedText style={[styles.optionDescription, { color: textSecondary }]}>
               Select form images from your photo library
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.optionCard} onPress={handleSelectExistingDocument}>
-            <View style={styles.optionIcon}>
-              <Ionicons name="folder-open" size={32} color="#636ae8" />
+          <TouchableOpacity style={[styles.optionCard, { backgroundColor: cardColor, borderColor }]} onPress={handleSelectExistingDocument}>
+            <View style={[styles.optionIcon, { backgroundColor: `${primaryColor}1A` }]}>
+              <Ionicons name="folder-open" size={32} color={primaryColor} />
             </View>
-            <Text style={styles.optionTitle}>Use Existing Document</Text>
-            <Text style={styles.optionDescription}>
+            <ThemedText style={styles.optionTitle}>Use Existing Document</ThemedText>
+            <ThemedText style={[styles.optionDescription, { color: textSecondary }]}>
               Convert a previously saved document into a form
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.infoContainer}>
-          <Text style={styles.infoTitle}>How it works:</Text>
-          <Text style={styles.infoText}>
+        <View style={[styles.infoContainer, { backgroundColor: `${primaryColor}1A`, borderLeftColor: primaryColor }]}>
+          <ThemedText style={styles.infoTitle}>How it works:</ThemedText>
+          <ThemedText style={[styles.infoText, { color: textSecondary }]}>
             1. Capture or select images of your form{'\n'}
             2. Our AI extracts the form fields automatically{'\n'}
             3. Fill out the digital version manually or with voice{'\n'}
             4. Save and share your completed forms
-          </Text>
+          </ThemedText>
         </View>
       </ScrollView>
     </>
@@ -259,7 +270,6 @@ export default function CreateFormScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   contentContainer: {
     padding: 20,
@@ -268,19 +278,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     padding: 20,
   },
   loadingText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     marginTop: 16,
     textAlign: 'center',
   },
   loadingSubText: {
     fontSize: 14,
-    color: '#666',
     marginTop: 8,
     textAlign: 'center',
     maxWidth: '80%',
@@ -292,13 +299,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#333',
     marginTop: 16,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 22,
@@ -307,19 +312,16 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   optionCard: {
-    backgroundColor: '#f9f9f9',
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#eaeaea',
   },
   optionIcon: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(99, 106, 232, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -327,31 +329,25 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   optionDescription: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     lineHeight: 20,
   },
   infoContainer: {
-    backgroundColor: '#f0f4ff',
     borderRadius: 12,
     padding: 20,
     borderLeftWidth: 4,
-    borderLeftColor: '#636ae8',
   },
   infoTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 12,
   },
   infoText: {
     fontSize: 14,
-    color: '#666',
     lineHeight: 20,
   },
 });
