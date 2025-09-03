@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { processForm } from '../services/FormProcessingService.ts';
+import { processForm } from '../services/FormProcessingService';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -19,6 +19,7 @@ export default function FormPreviewScreen() {
   const primaryColor = useThemeColor({}, 'primary');
   const cardColor = useThemeColor({}, 'card');
   const textSecondary = useThemeColor({}, 'textSecondary');
+  const primaryTextColor = useThemeColor({}, 'primaryText');
 
   const handleConfirm = () => {
     if (!imageUri) return;
@@ -70,8 +71,8 @@ export default function FormPreviewScreen() {
         
         {isLoading ? (
           <View style={[styles.button, styles.confirmButton, { backgroundColor: primaryColor }]}>
-            <ActivityIndicator size="small" color="#fff" />
-            <Text style={styles.confirmButtonText}>Processing...</Text>
+            <ActivityIndicator size="small" color={primaryTextColor} />
+            <Text style={[styles.confirmButtonText, { color: primaryTextColor }]}>Processing...</Text>
           </View>
         ) : (
           <TouchableOpacity 
@@ -79,8 +80,8 @@ export default function FormPreviewScreen() {
             onPress={handleConfirm} 
             disabled={!imageUri}
           >
-            <Ionicons name="checkmark" size={20} color="#fff" />
-            <Text style={styles.confirmButtonText}>Confirm</Text>
+            <Ionicons name="checkmark" size={20} color={primaryTextColor} />
+            <ThemedText style={[styles.confirmButtonText, { color: primaryTextColor }]}>Confirm</ThemedText>
           </TouchableOpacity>
         )}
       </View>

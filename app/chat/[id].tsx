@@ -15,10 +15,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { supabase } from '../../lib/supabaseClient.ts';
-import { getDocumentById } from '../../lib/documents.service.ts';
-import { sendMessage } from '@/lib/chat.service.ts';
-import { Document } from '../../lib/documents.service.ts';
+import { supabase } from '../../lib/supabaseClient';
+import { getDocumentById, Document } from '../../lib/documents.service';
+import { sendMessage } from '@/lib/chat.service';
 import { v4 as uuidv4 } from 'uuid';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -45,6 +44,10 @@ export default function ChatScreen() {
   const primaryColor = useThemeColor({}, 'primary');
   const cardColor = useThemeColor({}, 'card');
   const headerTintColor = useThemeColor({}, 'headerTint');
+  // Additional theme colors used in nested renders
+  const cardSecondaryColor = useThemeColor({}, 'cardSecondary');
+  const textSecondaryColor = useThemeColor({}, 'textSecondary');
+  const textPlaceholderColor = useThemeColor({}, 'textPlaceholder');
 
   // Predefined list of languages
   const languages = [
@@ -399,7 +402,7 @@ export default function ChatScreen() {
     // Handle loading message
     if (item.id === 'loading') {
       return (
-        <View style={[styles.messageContainer, styles.aiMessage, { backgroundColor: useThemeColor({}, 'cardSecondary') }]}>
+        <View style={[styles.messageContainer, styles.aiMessage, { backgroundColor: cardSecondaryColor }]}>
           <Text style={[styles.messageText, styles.aiMessageText, { color: textColor }]}>
             <Text style={[styles.loadingDots, { color: primaryColor }]}>{loadingDots}</Text>
           </Text>
@@ -420,14 +423,20 @@ export default function ChatScreen() {
     if (messageText === '') return null;
 
     return (
-      <View style={[
-        styles.messageContainer, 
-        isUser ? [styles.userMessage, { backgroundColor: primaryColor }] : [styles.aiMessage, { backgroundColor: useThemeColor({}, 'cardSecondary') }]
-      ]}>
-        <Text style={[
-          styles.messageText, 
-          isUser ? styles.userMessageText : [styles.aiMessageText, { color: textColor }]
-        ]}>
+      <View
+        style={[
+          styles.messageContainer,
+          isUser
+            ? [styles.userMessage, { backgroundColor: primaryColor }]
+            : [styles.aiMessage, { backgroundColor: cardSecondaryColor }],
+        ]}
+      >
+        <Text
+          style={[
+            styles.messageText,
+            isUser ? styles.userMessageText : [styles.aiMessageText, { color: textColor }],
+          ]}
+        >
           {messageText}
         </Text>
       </View>
@@ -482,18 +491,14 @@ export default function ChatScreen() {
                   value={inputMessage}
                   onChangeText={setInputMessage}
                   placeholder="Type a message..."
-                  placeholderTextColor={useThemeColor({}, 'textPlaceholder')}
+                  placeholderTextColor={textPlaceholderColor}
                   multiline
                   keyboardType="default"
                   returnKeyType="send"
                   blurOnSubmit={false}
                   editable={!isSending}
                   onSubmitEditing={handleSendMessage}
-                  onKeyPress={({ nativeEvent }) => {
-                    if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
-                      handleSendMessage();
-                    }
-                  }}
+                  // onKeyPress is unreliable for modifier keys on RN; rely on onSubmitEditing or Send button
                 />
                 <TouchableOpacity
                   style={[styles.sendButton, { backgroundColor: primaryColor }, (!inputMessage.trim() || isSending) && styles.disabledButton]}
@@ -548,7 +553,7 @@ export default function ChatScreen() {
                   onPress={() => handleLanguageSelect(language)}
                 >
                   <ThemedText style={styles.languageName}>{language.name}</ThemedText>
-                  <ThemedText style={[styles.languageNativeName, { color: useThemeColor({}, 'textSecondary') }]}>{language.nativeName}</ThemedText>
+                  <ThemedText style={[styles.languageNativeName, { color: textSecondaryColor }]}>{language.nativeName}</ThemedText>
                 </TouchableOpacity>
               ))}
             </ScrollView>
