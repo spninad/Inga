@@ -3,11 +3,22 @@ import { View, Text, StyleSheet, Image, ActivityIndicator, Alert, TouchableOpaci
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { processForm } from '../services/FormProcessingService.ts';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function FormPreviewScreen() {
   const router = useRouter();
   const { imageUri } = useLocalSearchParams<{ imageUri: string }>();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const borderColor = useThemeColor({}, 'border');
+  const primaryColor = useThemeColor({}, 'primary');
+  const cardColor = useThemeColor({}, 'card');
+  const textSecondary = useThemeColor({}, 'textSecondary');
 
   const handleConfirm = () => {
     if (!imageUri) return;
@@ -35,36 +46,36 @@ export default function FormPreviewScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Form Preview</Text>
-      <View style={styles.previewArea}>
+    <ThemedView style={styles.container}>
+      <ThemedText style={styles.title}>Form Preview</ThemedText>
+      <View style={[styles.previewArea, { backgroundColor: cardColor, borderColor }]}>
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.image} />
         ) : (
           <View style={styles.noImageContainer}>
-            <Ionicons name="image-outline" size={64} color="#ccc" />
-            <Text style={styles.noImageText}>No image found</Text>
+            <Ionicons name="image-outline" size={64} color={textSecondary} />
+            <ThemedText style={[styles.noImageText, { color: textSecondary }]}>No image found</ThemedText>
           </View>
         )}
       </View>
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
-          style={[styles.button, styles.retakeButton]} 
+          style={[styles.button, styles.retakeButton, { borderColor }]} 
           onPress={handleRetake} 
           disabled={isLoading}
         >
-          <Ionicons name="camera-reverse" size={20} color="#666" />
-          <Text style={styles.retakeButtonText}>Retake</Text>
+          <Ionicons name="camera-reverse" size={20} color={textSecondary} />
+          <ThemedText style={[styles.retakeButtonText, { color: textSecondary }]}>Retake</ThemedText>
         </TouchableOpacity>
         
         {isLoading ? (
-          <View style={[styles.button, styles.confirmButton]}>
+          <View style={[styles.button, styles.confirmButton, { backgroundColor: primaryColor }]}>
             <ActivityIndicator size="small" color="#fff" />
             <Text style={styles.confirmButtonText}>Processing...</Text>
           </View>
         ) : (
           <TouchableOpacity 
-            style={[styles.button, styles.confirmButton, !imageUri && styles.buttonDisabled]} 
+            style={[styles.button, styles.confirmButton, { backgroundColor: primaryColor }, !imageUri && styles.buttonDisabled]} 
             onPress={handleConfirm} 
             disabled={!imageUri}
           >
@@ -73,7 +84,7 @@ export default function FormPreviewScreen() {
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </ThemedView>
   );
 }
 
@@ -83,25 +94,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 20,
-    color: '#333',
   },
   previewArea: {
     width: '100%',
     height: '70%',
-    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#e9ecef',
   },
   image: {
     width: '100%',
@@ -114,7 +121,6 @@ const styles = StyleSheet.create({
   },
   noImageText: {
     fontSize: 16,
-    color: '#666',
     marginTop: 12,
   },
   buttonContainer: {
@@ -134,17 +140,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   retakeButton: {
-    backgroundColor: '#f9f9f9',
     borderWidth: 1,
-    borderColor: '#ddd',
   },
   retakeButtonText: {
     fontSize: 16,
-    color: '#666',
     fontWeight: '500',
   },
   confirmButton: {
-    backgroundColor: '#636ae8',
+    // backgroundColor will be set dynamically
   },
   confirmButtonText: {
     fontSize: 16,

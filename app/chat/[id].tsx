@@ -20,6 +20,9 @@ import { getDocumentById } from '../../lib/documents.service.ts';
 import { sendMessage } from '@/lib/chat.service.ts';
 import { Document } from '../../lib/documents.service.ts';
 import { v4 as uuidv4 } from 'uuid';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function ChatScreen() {
   const [chatSession, setChatSession] = useState<{ id: string; title: string; messages: any[] } | null>(null);
@@ -33,6 +36,15 @@ export default function ChatScreen() {
   const listRef = useRef<FlatList>(null);
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; isNew?: string; documentId?: string }>();
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const borderColor = useThemeColor({}, 'border');
+  const inputBackgroundColor = useThemeColor({}, 'inputBackground');
+  const primaryColor = useThemeColor({}, 'primary');
+  const cardColor = useThemeColor({}, 'card');
+  const headerTintColor = useThemeColor({}, 'headerTint');
 
   // Predefined list of languages
   const languages = [
@@ -387,9 +399,9 @@ export default function ChatScreen() {
     // Handle loading message
     if (item.id === 'loading') {
       return (
-        <View style={[styles.messageContainer, styles.aiMessage]}>
-          <Text style={[styles.messageText, styles.aiMessageText]}>
-            <Text style={styles.loadingDots}>{loadingDots}</Text>
+        <View style={[styles.messageContainer, styles.aiMessage, { backgroundColor: useThemeColor({}, 'cardSecondary') }]}>
+          <Text style={[styles.messageText, styles.aiMessageText, { color: textColor }]}>
+            <Text style={[styles.loadingDots, { color: primaryColor }]}>{loadingDots}</Text>
           </Text>
         </View>
       );
@@ -408,8 +420,14 @@ export default function ChatScreen() {
     if (messageText === '') return null;
 
     return (
-      <View style={[styles.messageContainer, isUser ? styles.userMessage : styles.aiMessage]}>
-        <Text style={[styles.messageText, isUser ? styles.userMessageText : styles.aiMessageText]}>
+      <View style={[
+        styles.messageContainer, 
+        isUser ? [styles.userMessage, { backgroundColor: primaryColor }] : [styles.aiMessage, { backgroundColor: useThemeColor({}, 'cardSecondary') }]
+      ]}>
+        <Text style={[
+          styles.messageText, 
+          isUser ? styles.userMessageText : [styles.aiMessageText, { color: textColor }]
+        ]}>
           {messageText}
         </Text>
       </View>
@@ -423,9 +441,9 @@ export default function ChatScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#636ae8" />
-      </View>
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={primaryColor} />
+      </ThemedView>
     );
   }
 
@@ -436,12 +454,12 @@ export default function ChatScreen() {
           title: chatSession?.title || 'Chat',
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#333" />
+              <Ionicons name="arrow-back" size={24} color={headerTintColor} />
             </TouchableOpacity>
           ),
         }}
       />
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardAvoidingView}
@@ -458,13 +476,13 @@ export default function ChatScreen() {
                 onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
                 onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
               />
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, { borderTopColor: borderColor, backgroundColor }]}>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: inputBackgroundColor, color: textColor }]}
                   value={inputMessage}
                   onChangeText={setInputMessage}
                   placeholder="Type a message..."
-                  placeholderTextColor="#999"
+                  placeholderTextColor={useThemeColor({}, 'textPlaceholder')}
                   multiline
                   keyboardType="default"
                   returnKeyType="send"
@@ -478,7 +496,7 @@ export default function ChatScreen() {
                   }}
                 />
                 <TouchableOpacity
-                  style={[styles.sendButton, (!inputMessage.trim() || isSending) && styles.disabledButton]}
+                  style={[styles.sendButton, { backgroundColor: primaryColor }, (!inputMessage.trim() || isSending) && styles.disabledButton]}
                   onPress={handleSendMessage}
                   disabled={!inputMessage.trim() || isSending}
                 >
@@ -491,15 +509,15 @@ export default function ChatScreen() {
               </View>
             </>
           ) : (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>Failed to load chat</Text>
+            <ThemedView style={styles.errorContainer}>
+              <ThemedText style={styles.errorText}>Failed to load chat</ThemedText>
               <TouchableOpacity
-                style={styles.retryButton}
+                style={[styles.retryButton, { backgroundColor: primaryColor }]}
                 onPress={loadChat}
               >
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
-            </View>
+            </ThemedView>
           )}
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -512,25 +530,25 @@ export default function ChatScreen() {
         onRequestClose={() => setShowLanguageModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Your Language</Text>
+          <View style={[styles.modalContent, { backgroundColor: cardColor }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+              <ThemedText style={styles.modalTitle}>Select Your Language</ThemedText>
               <TouchableOpacity
                 onPress={() => setShowLanguageModal(false)}
                 style={styles.closeButton}
               >
-                <Ionicons name="close" size={24} color="#333" />
+                <Ionicons name="close" size={24} color={textColor} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.languageList}>
               {languages.map((language) => (
                 <TouchableOpacity
                   key={language.code}
-                  style={styles.languageItem}
+                  style={[styles.languageItem, { borderBottomColor: borderColor }]}
                   onPress={() => handleLanguageSelect(language)}
                 >
-                  <Text style={styles.languageName}>{language.name}</Text>
-                  <Text style={styles.languageNativeName}>{language.nativeName}</Text>
+                  <ThemedText style={styles.languageName}>{language.name}</ThemedText>
+                  <ThemedText style={[styles.languageNativeName, { color: useThemeColor({}, 'textSecondary') }]}>{language.nativeName}</ThemedText>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -544,7 +562,6 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: 'white',
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -553,7 +570,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
   backButton: {
     padding: 8,
@@ -570,12 +586,10 @@ const styles = StyleSheet.create({
   },
   userMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#636ae8',
     borderBottomRightRadius: 4,
   },
   aiMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#f0f0f5',
     borderBottomLeftRadius: 4,
   },
   messageText: {
@@ -586,7 +600,7 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   aiMessageText: {
-    color: '#333',
+    // Color will be set dynamically
   },
   inputContainer: {
     flexDirection: 'row',
@@ -594,21 +608,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#eaeaea',
-    backgroundColor: '#FFFFFF',
   },
   input: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     maxHeight: 100,
     fontSize: 16,
-    color: '#333',
   },
   sendButton: {
-    backgroundColor: '#636ae8',
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -632,7 +641,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   retryButton: {
-    backgroundColor: '#636ae8',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -650,7 +658,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: 'white',
     borderRadius: 16,
     width: '90%',
     maxHeight: '80%',
@@ -662,12 +669,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eaeaea',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
   },
   closeButton: {
     padding: 4,
@@ -681,20 +686,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   languageName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
   },
   languageNativeName: {
     fontSize: 14,
-    color: '#666',
     fontStyle: 'italic',
   },
   loadingDots: {
-    color: '#636ae8',
     fontWeight: 'bold',
   },
 });

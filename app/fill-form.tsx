@@ -6,6 +6,8 @@ import { Document, getDocumentById } from '@/lib/documents.service.ts';
 import { FormSchema, getForms, saveFilledForm } from '@/lib/forms.service.ts';
 import { extractFormDataFromDocument, saveFormAsDocument } from '@/lib/forms-documents.service.ts';
 import FormFiller from '@/components/FormFiller.tsx';
+import { ThemedView } from '@/components/ThemedView';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function FillFormScreen() {
   const router = useRouter();
@@ -18,6 +20,9 @@ export default function FillFormScreen() {
   const [initialData, setInitialData] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+
+  // Theme colors
+  const primaryColor = useThemeColor({}, 'primary');
 
   useEffect(() => {
     initializeFormFilling();
@@ -158,9 +163,9 @@ export default function FillFormScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#636ae8" />
-      </View>
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={primaryColor} />
+      </ThemedView>
     );
   }
 
@@ -192,6 +197,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
 });
