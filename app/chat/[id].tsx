@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   disabledButton: {
-    backgroundColor: '#cccccc',
+    backgroundColor: '#ccc',
   },
   errorContainer: {
     flex: 1,
