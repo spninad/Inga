@@ -25,13 +25,13 @@ Click the feature titles to view images
 ### [Multi-page Document Upload](assets/readmeImages/document-upload.PNG)
 
 
-### [Multi-page Document Preview](assets/readmeImages/document-upload.PNG)
+### [Multi-page Document Preview](assets/readmeImages/multi-page-preview.jpeg)
 
 ### [Form Filling] (assets/readmeImages/form-filling.PNG)
 
-### [Chat Language Selection] (assets/readmeImages/lang-select.png)
+### [Chat Language Selection] (assets/readmeImages/lang-select.PNG)
 
-### [Chat for Simplifying Medical Terms] (assets/readmeImages/chat-simplify.png)
+### [Chat for Simplifying Medical Terms] (assets/readmeImages/chat-simplify.PNG)
 
 ---
 
