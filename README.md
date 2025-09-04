@@ -16,6 +16,24 @@ The app features a chat interface for document-related queries and supports form
 
 ---
 
+## Feature Highlights
+
+### App Landing Page
+![Documents View](assets/readmeImages/app-preview.PNG)
+
+### Multi-page Document Upload & Preview
+![Document Upload](assets/readmeImages/document-upload.PNG)
+![Multi-page Document Preview](assets/readmeImages/multi-page-preview.jpeg)
+
+### Form Filling
+![Form Filling](assets/readmeImages/form-filling.PNG)
+
+### Chat for Simplifying Medical Terms (with Language Selection)
+![Chat Simplification](assets/readmeImages/chat-simplify.png)
+![Language Selection](assets/readmeImages/lang-select.png)
+
+---
+
 ## Functionality
 
 - **Upload/scan multi-page documents:** Capture and store multiple pages of medical documents and images.
