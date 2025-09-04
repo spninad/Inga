@@ -16,22 +16,22 @@ The app features a chat interface for document-related queries and supports form
 
 ---
 
-## Feature Highlights
+## Feature Functionality
 
-### App Landing Page
-<img src="assets/readmeImages/app-preview.PNG" alt="App Landing Page" width="350"/>
+Click the feature titles to view images
+
+### [App Landing Page](assets/readmeImages/app-preview.PNG)
 
 ### [Multi-page Document Upload](assets/readmeImages/document-upload.PNG)
-<img src="assets/readmeImages/document-upload.PNG" alt="Multi-page Document Upload" width="350"/>
+
+
 ### [Multi-page Document Preview](assets/readmeImages/document-upload.PNG)
-<img src="assets/readmeImages/multi-page-preview.jpeg" alt="Multi-page Document Preview" width="350"/>
 
-### Form Filling
-![Form Filling](assets/readmeImages/form-filling.PNG)
+### [Form Filling] (assets/readmeImages/form-filling.PNG)
 
-### Chat for Simplifying Medical Terms (with Language Selection)
-![Chat Simplification](assets/readmeImages/chat-simplify.png)
-![Language Selection](assets/readmeImages/lang-select.png)
+### [Chat Language Selection] (assets/readmeImages/lang-select.png)
+
+### [Chat for Simplifying Medical Terms] (assets/readmeImages/chat-simplify.png)
 
 ---
 
