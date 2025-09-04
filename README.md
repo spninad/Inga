@@ -18,7 +18,7 @@ The app features a chat interface for document-related queries and supports form
 
 ## Feature Highlights
 
-### [App Landing Page](assets/readmeImages/app-preview.PNG)
+### App Landing Page
 <img src="assets/readmeImages/app-preview.PNG" alt="App Landing Page" width="350"/>
 
 ### [Multi-page Document Upload](assets/readmeImages/document-upload.PNG)
