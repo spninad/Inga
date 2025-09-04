@@ -1,66 +1,88 @@
-# Inga
+🏆 **Winner of the Diamond Hacks 2025 Patient Safety Sponsor Award**
 
-This is an experimental voice assistant. Created for DiamondHacks 2025.
+**Contributors:**  
+- Iha Gadiya  
+- Ninad Satish
+
+---
+
+## Purpose
+
+Inga is an experimental voice assistant and document management app built for DiamondHacks 2025.  
+It helps users securely upload, scan, fill, and manage medical documents and images.  
+The app features a chat interface for document-related queries and supports form filling directly from your device.
+
+---
+
+## Features
+
+- Secure authentication with Supabase
+- Upload and scan medical documents/images
+- Store documents and images in Supabase
+- Fill forms and submit them digitally
+- Chat interface for document and form assistance
+- Modern UI with Expo and React Native
+
+---
 
 ## Architecture
 
-Inga uses a secure architecture where:
+- **Mobile app:** Handles UI and user interactions
+- **Supabase:** Provides database, storage, authentication, and secure proxy functions for OpenAI
+- **Supabase Edge Functions:**  
+  - `openai-proxy`: Handles standard text-based chat messages  
+  - `openai-vision`: Handles messages containing both text and images
 
-1. The mobile app handles UI and user interactions
-2. Supabase provides:
-   - Database for storing documents and chat history
-   - Storage for document images
-   - Edge Functions that securely proxy requests to OpenAI (keeping API keys secure)
-   - Authentication for securing all operations
+**Security:**  
+- Authentication required for all API requests  
+- OpenAI API keys stored server-side  
+- Images accessed via signed URLs  
+- Each user can only access their own data
 
-### Supabase Functions
+---
 
-The app uses two Supabase Edge Functions to communicate with OpenAI:
+## Get Started
 
-- `openai-proxy`: Handles standard text-based chat messages
-- `openai-vision`: Handles messages containing both text and images (for document analysis)
-
-### Security Features
-
-- **Authentication Required**: All API requests require valid Supabase authentication
-- **Server-side API Keys**: OpenAI API keys are stored securely on the server side
-- **Signed URLs**: Images are accessed via temporary signed URLs for enhanced security
-- **User Isolation**: Each user can only access their own documents and chats
-
-## Get started
-
-1. Install dependencies
-
+1. **Install dependencies**
    ```bash
    npm install
    ```
 
-2. Add environment variables to the .env file
+2. **Add environment variables to the `.env` file**
+   ```
+   SUPABASE_URL=your-supabase-url
+   SUPABASE_ANON_KEY=your-supabase-anon-key
+   ```
 
-3. Deploy Supabase Functions (if using your own Supabase project)
+3. **Deploy Supabase Functions (if using your own Supabase project)**
    ```bash
    cd supabase/functions
    chmod +x deploy.sh
    ./deploy.sh
    ```
-
-   You'll need to set these secrets for the functions:
+   Set these secrets for the functions:
    ```bash
    supabase secrets set OPENAI_API_KEY=your-openai-api-key
    supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
    ```
 
-4. Start the app
-
+4. **Start the app**
    ```bash
-    npx expo start
+   npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+   After running `npx expo start`, you will see options in your terminal to open the app in several environments:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+   - **Development build:** For full native features and debugging ([setup guide](https://docs.expo.dev/develop/development-builds/introduction/))
+   - **Android emulator:** Press `a` to launch the app in Android Studio's emulator ([setup guide](https://docs.expo.dev/workflow/android-studio-emulator/))
+   - **iOS simulator:** Press `i` to launch the app in Xcode's iOS simulator ([setup guide](https://docs.expo.dev/workflow/ios-simulator/))
+   - **Expo Go:** Scan the QR code with the Expo Go app on your iOS or Android device ([Expo Go](https://expo.dev/go)). This is a quick way to preview the app, but some native features may be limited.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+   Choose the option that matches your development setup. For most features, a development build or emulator/simulator is recommended.
+
+---
+
+## Notes
+
+- You can start developing by editing the files inside the **app** directory.
+- This project uses [file-based routing](https://docs.expo.dev/router/introduction) via Expo Router.
