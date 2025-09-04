@@ -150,28 +150,10 @@ export default function ChatScreen() {
           const document = await getDocumentById(params.documentId, currentUserId!);
           if (document && document.name) {
             chatTitle = document.name; // Use the document's name as the chat title
+            chatDocumentId = params.documentId;
           }
         }
-        else{
-          chatDocumentId = uuidv4();
-
-          console.log("id: ", chatDocumentId);
-
-          const { data: newDoc, error: docError } = await supabase
-            .from('documents')
-            .insert([{ user_id: currentUserId, id: chatDocumentId, name: chatTitle, created_at: isoNow,
-            updated_at: isoNow, }])
-            .select()
-            .single();
-
-          if (docError || !newDoc) {
-            console.error('Error creating new document:', docError);
-            setIsLoading(false);
-            return;
-          }
-
-          params.documentId = chatDocumentId;
-        }
+        // For general chats, chatDocumentId remains null - no fake document creation
 
         // Create chat
         const { data: chat, error: chatError } = await supabase

@@ -55,7 +55,12 @@ export async function getDocuments(userId: string): Promise<Document[]> {
       throw new Error(`Error fetching documents: ${error.message}`);
     }
     
-    return data || [];
+    // Filter out fake chat documents - only return documents that have actual images
+    const realDocuments = (data || []).filter(doc => 
+      doc.images && Array.isArray(doc.images) && doc.images.length > 0
+    );
+    
+    return realDocuments;
   } catch (error) {
     console.error('Error in getDocuments:', error);
     return [];
