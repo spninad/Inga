@@ -1,3 +1,5 @@
+# Inga
+
 🏆 **Winner of the Diamond Hacks 2025 Patient Safety Sponsor Award**
 
 **Contributors:**  
@@ -14,14 +16,37 @@ The app features a chat interface for document-related queries and supports form
 
 ---
 
+## Functionality
+
+- **Upload/scan multi-page documents:** Capture and store multiple pages of medical documents and images.
+- **Fill forms with PDF preview:** Complete medical forms and preview the finalized PDF before submission.
+- **Chat to simplify medical terms:** Use the chat interface to get simplified explanations of medical terms, with support for language selection. The chat is pre-prompted to provide easy-to-understand term explanations.
+- **Language selection:** Choose your preferred language for chat and document interactions.
+
+---
+
 ## Features
 
 - Secure authentication with Supabase
 - Upload and scan medical documents/images
 - Store documents and images in Supabase
 - Fill forms and submit them digitally
-- Chat interface for document and form assistance
+- PDF form preview before finalizing
+- Chat interface for document and form assistance, focused on simplifying medical language
+- Language selection for chat and document interactions
 - Modern UI with Expo and React Native
+
+---
+
+## Tools Used
+
+- **Expo** (React Native framework)
+- **Supabase** (database, authentication, storage, edge functions)
+- **OpenAI** (for chat and language simplification)
+- **PDF libraries** (for form preview and finalization)
+- **Expo Router** (for navigation)
+- **TypeScript** (for type safety)
+- **Jest** (for testing)
 
 ---
 
@@ -82,7 +107,8 @@ The app features a chat interface for document-related queries and supports form
 
 ---
 
-## Notes
+## Disclaimer
 
-- You can start developing by editing the files inside the **app** directory.
-- This project uses [file-based routing](https://docs.expo.dev/router/introduction) via Expo Router.
+This app is an experimental project for public use and **does not fall under HIPAA compliance**.  
+No liability is taken for the handling, storage, or transmission of medical data.  
+Please do not use this app for sensitive or regulated medical information.
