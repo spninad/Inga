@@ -18,12 +18,13 @@ The app features a chat interface for document-related queries and supports form
 
 ## Feature Highlights
 
-### App Landing Page
-![Documents View](assets/readmeImages/app-preview.PNG)
+### [App Landing Page](assets/readmeImages/app-preview.PNG)
+<img src="assets/readmeImages/app-preview.PNG" alt="App Landing Page" width="350"/>
 
-### Multi-page Document Upload & Preview
-![Document Upload](assets/readmeImages/document-upload.PNG)
-![Multi-page Document Preview](assets/readmeImages/multi-page-preview.jpeg)
+### [Multi-page Document Upload](assets/readmeImages/document-upload.PNG)
+<img src="assets/readmeImages/document-upload.PNG" alt="Multi-page Document Upload" width="350"/>
+### [Multi-page Document Preview](assets/readmeImages/document-upload.PNG)
+<img src="assets/readmeImages/multi-page-preview.jpeg" alt="Multi-page Document Preview" width="350"/>
 
 ### Form Filling
 ![Form Filling](assets/readmeImages/form-filling.PNG)
