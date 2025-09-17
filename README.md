@@ -1,76 +1,73 @@
 # Inga
 
-🏆 **Winner of the Diamond Hacks 2025 Patient Safety Sponsor Award**
+> 🏆 **Winner of the Diamond Hacks 2025 Patient Safety Sponsor Award**
 
-**Contributors:**  
-- Iha Gadiya  
-- Ninad Satish
-
----
+**Contributors:**  Ninad Satish • Iha Gadiya  
 
 ## Purpose
 
-Inga is an experimental voice assistant and document management app built for DiamondHacks 2025.  
-It helps users securely upload, scan, fill, and manage medical documents and images.  
-The app features a chat interface for document-related queries and supports form filling directly from your device.
-
----
+Inga is an experimental assistant and document management app built for DiamondHacks 2025.  
+It helps users to better understand their medical (and other) documents by bridging language barriers and simplifying complex medical terminology, using LLMs. The app helps users securely upload, scan, fill, and manage documents while providing multilingual chat support for improved comprehension and accessibility.
 
 ## Feature Functionality
 
-Click the feature titles for app preview.
+<div align="center">
 
-### [App Landing Page](assets/readmeImages/app-preview.PNG)
+  <table>
+    <tr>
+      <td align="center">
+        <img src="assets/readmeImages/app-preview.PNG" alt="App landing page preview" width="300" /><br/>
+        <sub><b>App Landing Page</b></sub>
+      </td>
+      <td align="center">
+        <img src="assets/readmeImages/document-upload.PNG" alt="Multi-page document upload" width="300" /><br/>
+        <sub><b>Multi-page Document Upload</b></sub>
+      </td>
+      <td align="center">
+        <img src="assets/readmeImages/multi-page-preview.jpeg" alt="Multi-page document preview" width="300" /><br/>
+        <sub><b>Multi-page Preview</b></sub>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="assets/readmeImages/form-filling.PNG" alt="Form filling flow" width="300" /><br/>
+        <sub><b>Form Filling</b></sub>
+      </td>
+      <td align="center">
+        <img src="assets/readmeImages/lang-select.PNG" alt="Chat language selection" width="300" /><br/>
+        <sub><b>Language Selection</b></sub>
+      </td>
+      <td align="center">
+        <img src="assets/readmeImages/chat-simplify.PNG" alt="Chat simplifying medical terms" width="300" /><br/>
+        <sub><b>Chat Simplification</b></sub>
+      </td>
+    </tr>
+  </table>
+
+</div>
+
 - Modern UI built with Expo and React Native.
-
-### [Multi-page Document Upload](assets/readmeImages/document-upload.PNG)
-- Upload and scan multi-page medical documents and images.
-- Secure authentication with Supabase.
-- Store documents and images in Supabase.
-
-### [Multi-page Document Preview](assets/readmeImages/multi-page-preview.jpeg)
-- Preview scanned multi-page documents before finalizing.
-
-### [Form Filling](assets/readmeImages/form-filling.PNG)
-- Fill forms digitally and preview the finalized PDF.
-- Submit forms securely to Supabase storage.
-
-### [Chat Language Selection](assets/readmeImages/lang-select.PNG)
-- Choose your preferred language for chat and document interactions.
-
-### [Chat for Simplifying Medical Terms](assets/readmeImages/chat-simplify.PNG)
-- Chat interface pre-prompted to provide easy-to-understand explanations of medical terms.
-- Uses OpenAI for chat and language simplification.
-
----
+- Upload, scan, and securely store multi-page medical documents and images.
+- Preview and fill forms digitally, then save finalized PDFs.
+- Choose your chat language and get simplified explanations of medical terms.
 
 ## Tools Used
 
-- **Expo** (React Native framework)
+- **React Native** (with Expo, a React Native framework)
 - **Supabase** (database, authentication, storage, edge functions)
 - **OpenAI** (for chat and language simplification)
-- **PDF libraries** (for form preview and finalization)
 - **Expo Router** (for navigation)
 - **TypeScript** (for type safety)
-- **Jest** (for testing)
 
----
+
 
 ## Architecture
 
-- **Mobile app:** Handles UI and user interactions
-- **Supabase:** Provides database, storage, authentication, and secure proxy functions for OpenAI
-- **Supabase Edge Functions:**  
-  - `openai-proxy`: Handles standard text-based chat messages  
-  - `openai-vision`: Handles messages containing both text and images
+- **Mobile app:** provides a simple frontend for users to interact with the app, with some data stored on device.
+- **Supabase:** provides database, storage, authentication, and secure proxy functions for OpenAI
+- **Security:** all API requests are handled by Supabase functions and require authentication. OpenAI API keys are stored server-side, images are accessed via signed URLs, and users can only access their own data (enforced by Postgres Row Level Security policies).
 
-**Security:**  
-- Authentication required for all API requests  
-- OpenAI API keys stored server-side  
-- Images accessed via signed URLs  
-- Each user can only access their own data
 
----
 
 ## Get Started
 
@@ -91,7 +88,7 @@ Click the feature titles for app preview.
    chmod +x deploy.sh
    ./deploy.sh
    ```
-   Set these secrets for the functions:
+   Set these secrets for the functions. You may need to create a [Supabase project](https://supabase.com/) first.
    ```bash
    supabase secrets set OPENAI_API_KEY=your-openai-api-key
    supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
@@ -111,10 +108,7 @@ Click the feature titles for app preview.
 
    Choose the option that matches your development setup. For most features, a development build or emulator/simulator is recommended.
 
----
-
-## Disclaimer
-
-This app is an experimental project for public use and **does not fall under HIPAA compliance**.  
-No liability is taken for the handling, storage, or transmission of medical data.  
-Please do not use this app for sensitive or regulated medical information.
+> [!WARNING]
+> This app is an experimental project for public use and **does not fall under HIPAA compliance**.  
+> No liability is taken for the handling, storage, or transmission of medical data.  
+> Please do not use this app for sensitive or regulated medical information.
